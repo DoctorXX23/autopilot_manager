@@ -30,7 +30,13 @@ jobs:
         sudo apt-get install -y \
             build-essential \
             cmake \
+            colordiff \
             git
+        git clone --recursive https://github.com/Auterion/MAVSDK.git -b develop
+        cd MAVSDK
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SHARED_LIBS=ON -Bbuild/default -H.
+        sudo cmake --build build/default --target install -j`nproc --all`
+        sudo ldconfig
     - name: Build
       run: |
         cmake -Bbuild -S.
