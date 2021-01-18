@@ -38,10 +38,12 @@
  */
 
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
+
+#include <mavsdk/mavsdk.h>
 
 #include "modules/MissionManager.hpp"
 
@@ -57,22 +59,54 @@ static void wait_for_termination_signal() {
 	sigaddset(&sigs, SIGTERM);
 	int sigfd = ::signalfd(-1, &sigs, SFD_CLOEXEC);
 	struct signalfd_siginfo si;
-	while (::read(sigfd, &si, sizeof(si)) == 0) {}
+	while (::read(sigfd, &si, sizeof(si)) == 0) {
+	}
 }
 
-int main(int argc, char *argv[]) {
-    if (argc == 2) {
-        auto mission_manager = std::make_shared<MissionManager>();
-        mission_manager->init();
-    } else {
-        usage(argv[0]);
-        return 1;
-    }
+int main(int argc, char* argv[]) {
+	// if (argc == 2) {
+		// Configure MAVSDK Mission Manager instance
+		mavsdk::Mavsdk mavsdk_mission_computer;
+
+		// Change configuration so the instance is treated as a mission computer
+		mavsdk::Mavsdk::Configuration config_cc(mavsdk::Mavsdk::Configuration::UsageType::CompanionComputer);
+		mavsdk_mission_computer.set_configuration(config_cc);
+
+		auto system = std::shared_ptr<mavsdk::System>{nullptr};
+
+		mavsdk::ConnectionResult ret_comp = mavsdk_mission_computer.add_udp_connection(14540);
+		if (ret_comp == mavsdk::ConnectionResult::Success) {
+			std::cout << "Waiting to discover vehicle from the mission computer side" << std::endl;
+			std::promise<void> prom;
+			std::future<void> fut = prom.get_future();
+
+			mavsdk_mission_computer.subscribe_on_new_system([&prom, &mavsdk_mission_computer, &system]() {
+				for (const auto& sys : mavsdk_mission_computer.systems()) {
+					if (sys->has_autopilot()) {
+						system = sys;
+						prom.set_value();
+						break;
+					}
+				}
+			});
+
+			fut.wait_for(std::chrono::seconds(10));
+
+			auto mission_manager = std::make_shared<MissionManager>(system);
+			if (mission_manager->init() == 0) {
+				mission_manager->run();
+			}
+
+		} else {
+			std::cerr << "Failed to connect to port 14540" << std::endl;
+		}
+
+	// } else {
+	// 	usage(argv[0]);
+	// 	return 1;
+	// }
 
 	wait_for_termination_signal();
 }
 
-void usage(const std::string& bin_name)
-{
-    std::cout << "Usage : " << bin_name << " mission_computer" << std::endl;
-}
+void usage(const std::string& bin_name) { std::cout << "Usage : " << bin_name << " mission_computer" << std::endl; }

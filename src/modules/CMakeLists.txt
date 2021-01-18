@@ -1,3 +1,6 @@
+find_package(MAVSDK REQUIRED)
+find_package(Threads REQUIRED)
+
 add_library(
     mission-manager
     MissionManager.cpp
@@ -5,7 +8,11 @@ add_library(
 
 target_link_libraries(
     mission-manager
-    autopilot-manager
+    PUBLIC
+    MAVSDK::mavsdk_telemetry
+    MAVSDK::mavsdk_custom_action
+    MAVSDK::mavsdk
+    PRIVATE Threads::Threads
 )
 
 target_include_directories(mission-manager PUBLIC

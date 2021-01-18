@@ -39,22 +39,54 @@
 
 #pragma once
 
+#include <atomic>
+#include <future>
 #include <iostream>
 #include <string>
 
 #include <mavsdk/mavsdk.h>
 #include "ModuleBase.hpp"
 
+// MAVSDK dependencies
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/custom_action/custom_action.h>
+#include <mavsdk/plugins/telemetry/telemetry.h>
+
 class MissionManager : public ModuleBase {
 public:
-	MissionManager() = default;
-	~MissionManager() = default;
-    MissionManager(const MissionManager&) = delete;
-    const MissionManager& operator=(const MissionManager&) = delete;
+	MissionManager(std::shared_ptr<mavsdk::System> system);
+	~MissionManager();
+	MissionManager(const MissionManager&) = delete;
+	const MissionManager& operator=(const MissionManager&) = delete;
 
-	void init() override;
+	int init() override;
 	void deinit() override;
-    void run() override;;
+	void run() override;
 
 private:
+	std::shared_ptr<mavsdk::System> _mavsdk_system;
+	std::shared_ptr<mavsdk::CustomAction> _custom_action;
+	std::shared_ptr<mavsdk::Telemetry> _telemetry;
+
+	std::atomic<bool> _received_custom_action{false};
+	std::atomic<bool> _mission_finished{false};
+	std::atomic<bool> _action_stopped{false};
+	std::atomic<bool> _new_action{false};
+	std::atomic<bool> _new_actions_check_int{false};
+
+	std::mutex cancel_mtx;
+	std::condition_variable cancel_signal;
+
+	std::vector<mavsdk::CustomAction::ActionToExecute> _actions;
+	std::vector<double> _actions_progress;
+	std::vector<mavsdk::CustomAction::Result> _actions_result;
+	std::vector<mavsdk::CustomAction::ActionMetadata> _actions_metadata;
+	std::vector<std::thread> _progress_threads;
+
+	void new_action_check();
+	void send_progress_status(std::shared_ptr<mavsdk::CustomAction> custom_action,
+				  mavsdk::CustomAction::ActionToExecute action);
+	void process_custom_action(mavsdk::CustomAction::ActionToExecute action);
+	void execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata,
+				   std::shared_ptr<mavsdk::CustomAction> custom_action);
 };

@@ -61,21 +61,20 @@ public:
 	 */
 	const ModuleBase& operator=(const ModuleBase&) = delete;
 
-    /**
-     * @brief Module init
-     */
-    virtual void init() = 0;
+	/**
+	 * @brief Module init
+	 */
+	virtual int init() = 0;
 
-    /**
-     * @brief Module deinit
-     */
-    virtual void deinit() = 0;
+	/**
+	 * @brief Module deinit
+	 */
+	virtual void deinit() = 0;
 
-    /**
-     * @brief Module run
-     */
-    virtual void run() = 0;
+	/**
+	 * @brief Module run
+	 */
+	virtual void run() = 0;
 
 private:
-
 };

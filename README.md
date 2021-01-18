@@ -9,7 +9,7 @@ An AuterionOS service for higher level interactivity with onboard and flight con
 
 ```bash
 cmake -Bbuild -S.
-cmake --build build -j8
+cmake --build build -j$(nproc --all)
 ```
 
 # Usage

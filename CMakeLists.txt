@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.10.2)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,8 +13,6 @@ else()
     add_definitions("-WX -W2")
 endif()
 
-find_package(MAVSDK REQUIRED)
-
 add_subdirectory(src/modules)
 
 add_executable(
@@ -25,7 +23,6 @@ add_executable(
 target_link_libraries(
     autopilot-manager
     mission-manager
-    MAVSDK::mavsdk
 )
 
 # Install autopilot-manager
