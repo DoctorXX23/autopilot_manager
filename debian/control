@@ -1,0 +1,13 @@
+Source: autopilot-manager
+Section: unknown
+Priority: optional
+Maintainer: Nuno Marques <nuno@auterion.com>
+Build-Depends:  cmake
+Standards-Version: 4.1.3
+Homepage: https://github.com/Auterion/autopilot_manager
+
+Package: autopilot-manager
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: autopilot-manager
+ A service for higher level interactivity with onboard and flight controller components, using Auterion SDKs and MAVSDK.

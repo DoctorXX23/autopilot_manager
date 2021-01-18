@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: autopilot_manager
+Upstream-Contact: Nuno Marques <nuno@auterion.com>
+Source: https://github.com/Auterion/autopilot_manager
+
+Files: *
+Copyright: 2021 Auterion AG
