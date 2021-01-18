@@ -84,9 +84,7 @@ private:
 	std::vector<std::thread> _progress_threads;
 
 	void new_action_check();
-	void send_progress_status(std::shared_ptr<mavsdk::CustomAction> custom_action,
-				  mavsdk::CustomAction::ActionToExecute action);
+	void send_progress_status(mavsdk::CustomAction::ActionToExecute action);
 	void process_custom_action(mavsdk::CustomAction::ActionToExecute action);
-	void execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata,
-				   std::shared_ptr<mavsdk::CustomAction> custom_action);
+	void execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata);
 };

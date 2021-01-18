@@ -119,8 +119,7 @@ void MissionManager::run() {
     new_actions_check_th.join();
 }
 
-void MissionManager::send_progress_status(std::shared_ptr<mavsdk::CustomAction> custom_action,
-					  mavsdk::CustomAction::ActionToExecute action) {
+void MissionManager::send_progress_status(mavsdk::CustomAction::ActionToExecute action) {
 	while (!_action_stopped.load() && _actions_result.back() != mavsdk::CustomAction::Result::Unknown) {
 		mavsdk::CustomAction::ActionToExecute action_exec{};
 		action_exec.id = action.id;
@@ -131,7 +130,7 @@ void MissionManager::send_progress_status(std::shared_ptr<mavsdk::CustomAction> 
 		std::future<void> fut = prom.get_future();
 
 		// Send response with the result and the progress
-		custom_action->respond_custom_action_async(action_exec, action_result,
+		_custom_action->respond_custom_action_async(action_exec, action_result,
 							   [&prom](mavsdk::CustomAction::Result result) {
 								   // if (result != CustomAction::Result::Success) {
 								   //
@@ -178,12 +177,12 @@ void MissionManager::process_custom_action(mavsdk::CustomAction::ActionToExecute
 
 	// Start the progress status report thread
 	_progress_threads.push_back(
-	    std::thread(&MissionManager::send_progress_status, this, _custom_action, _actions.back()));
+	    std::thread(&MissionManager::send_progress_status, this, _actions.back()));
 
 	// Start the custom action execution
 	// For the purpose of the test, we are storing all the actions but only processing the last one.
 	// This means that only one action at a time can be processed
-	execute_custom_action(_actions_metadata.back(), _custom_action);
+	execute_custom_action(_actions_metadata.back());
 
 	if (_actions_progress.back() == 100.0 && _actions_result.back() == mavsdk::CustomAction::Result::Success) {
 		// Used to stop the progress status thread
@@ -193,13 +192,12 @@ void MissionManager::process_custom_action(mavsdk::CustomAction::ActionToExecute
 	_progress_threads.back().join();
 }
 
-void MissionManager::execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata,
-					   std::shared_ptr<mavsdk::CustomAction> custom_action) {
+void MissionManager::execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata) {
 	if (!action_metadata.stages.empty()) {
 		for (unsigned i = 0; i < action_metadata.stages.size(); i++) {
 			if (!_action_stopped.load()) {
 				mavsdk::CustomAction::Result stage_res =
-				    custom_action->execute_custom_action_stage(action_metadata.stages[i]);
+				    _custom_action->execute_custom_action_stage(action_metadata.stages[i]);
 				// if (stage_res != mavsdk::CustomAction::Result::Success) {
 				//
 				// }
@@ -227,7 +225,7 @@ void MissionManager::execute_custom_action(mavsdk::CustomAction::ActionMetadata 
 		if (!_action_stopped.load()) {
 			std::promise<mavsdk::CustomAction::Result> prom;
 			std::future<mavsdk::CustomAction::Result> fut = prom.get_future();
-			custom_action->execute_custom_action_global_script_async(
+			_custom_action->execute_custom_action_global_script_async(
 			    action_metadata.global_script,
 			    [&prom](mavsdk::CustomAction::Result script_result) { prom.set_value(script_result); });
 
