@@ -46,19 +46,19 @@
                         },
                         {
                                 "cmd": {},
-                                "script": "./data/example/custom_action/custom_action_scripts/dummy_safe_landing.py",
+                                "script": "./data/example/custom_action/custom_action_scripts/dummy_safe_landing.py -a 127.0.0.1 -p 14540",
                                 "timestamp_start": null,
                                 "timestamp_stop": 10
                         },
                         {
                                 "cmd": {},
-                                "script": "./data/example/custom_action/custom_action_scripts/dummy_cargo_compartment.py open",
+                                "script": "./data/example/custom_action/custom_action_scripts/dummy_cargo_compartment.py -a 127.0.0.1 -p 14540 --open",
                                 "timestamp_start": null,
                                 "timestamp_stop": 5
                         },
                         {
                                 "cmd": {},
-                                "script": "./data/example/custom_action/custom_action_scripts/dummy_cargo_compartment.py close",
+                                "script": "./data/example/custom_action/custom_action_scripts/dummy_cargo_compartment.py -a 127.0.0.1 -p 14540 --close",
                                 "timestamp_start": null,
                                 "timestamp_stop": 5
                         },
@@ -105,33 +105,33 @@
                 ]
         },
         "action_1": {
-                "name": "Integration test - turn-on air quality sensor",
+                "name": "Turn-on air quality sensor",
                 "description": "Example action to turn-on an onboard sensor",
-                "global_script": "./data/example/custom_action/custom_action_scripts/dummy_air_quality_sensor.py on",
-                "global_timeout": 1.0,
+                "global_script": "./data/example/custom_action/custom_action_scripts/dummy_air_quality_sensor.py -a 127.0.0.1 -p 14550 --on",
+                "global_timeout": 3.0,
                 "stages": [{}]
         },
         "action_2": {
-                "name": "Integration test - turn-off air quality sensor",
+                "name": "Turn-off air quality sensor",
                 "description": "Example action to turn-off an onboard sensor",
-                "global_script": "./data/example/custom_action/custom_action_scripts/dummy_air_quality_sensor.py off",
-                "global_timeout": 1.0,
+                "global_script": "./data/example/custom_action/custom_action_scripts/dummy_air_quality_sensor.py -a 127.0.0.1 -p 14540 --off",
+                "global_timeout": 3.0,
                 "stages": [{}]
         },
         "action_3": {
-                "name": "Integration test - package delivery with winch action",
+                "name": "Package delivery with winch action",
                 "description": "Example action of a delivery with a winch procedure",
                 "global_script": "",
                 "global_timeout": null,
                 "stages": [{
                                 "cmd": {},
-                                "script": "./data/example/custom_action/custom_action_scripts/dummy_winch.py descend",
+                                "script": "./data/example/custom_action/custom_action_scripts/dummy_winch.py -a 127.0.0.1 -p 14540 --descend",
                                 "timestamp_start": null,
                                 "timestamp_stop": 7.0
                         },
                         {
                                 "cmd": {},
-                                "script": "./data/example/custom_action/custom_action_scripts/dummy_winch.py raise",
+                                "script": "./data/example/custom_action/custom_action_scripts/dummy_winch.py -a 127.0.0.1 -p 14540 --raise",
                                 "timestamp_start": null,
                                 "timestamp_stop": 7.0
                         }
