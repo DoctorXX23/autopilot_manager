@@ -105,7 +105,6 @@ void MissionManager::run() {
 
 	// Get the custom action to process
 	_custom_action->subscribe_custom_action([this](mavsdk::CustomAction::ActionToExecute action_to_exec) {
-        std::cout << "Test" << std::endl;
 		if (_actions.empty() || (!_actions.empty() && _actions.back().id != action_to_exec.id)) {
 			_actions.push_back(action_to_exec);
 			_new_action.store(true, std::memory_order_relaxed);
@@ -261,4 +260,5 @@ void MissionManager::execute_custom_action(mavsdk::CustomAction::ActionMetadata 
 	} else if (!_action_stopped.load() && _actions_progress.back() == 100) {
 		std::cout << "Custom action #" << _actions_metadata.back().id << " executed!" << std::endl;
 	}
+	_actions.clear();
 }
