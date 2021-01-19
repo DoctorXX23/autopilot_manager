@@ -37,7 +37,7 @@ void help_argv_description(const char* pgm) {
 	std::cout
 	    << pgm
 	    << " [OPTIONS...]\n\n"
-	       "  -m --mavlink-port      MAVLink port to connect the Autopilot Manager MAVSDK instance through UDP. Default: 14540\n"
+	       "  -m --mavlink-port      MAVLink port to connect the Autopilot Manager MAVSDK instance through UDP. Default: 14570\n"
 	       "  -h --help              Print this message\n";
 }
 

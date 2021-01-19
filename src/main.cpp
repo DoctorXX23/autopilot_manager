@@ -49,7 +49,7 @@
 #include "modules/MissionManager.hpp"
 
 int main(int argc, char* argv[]) {
-	uint32_t mavlink_port{14540};
+	uint32_t mavlink_port{14570};
 
 	parse_argv(argc, argv, mavlink_port);
 
