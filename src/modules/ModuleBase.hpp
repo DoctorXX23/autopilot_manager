@@ -64,7 +64,7 @@ public:
 	/**
 	 * @brief Module init
 	 */
-	virtual int init() = 0;
+	virtual void init() = 0;
 
 	/**
 	 * @brief Module deinit

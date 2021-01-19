@@ -31,61 +31,45 @@
  *
  ****************************************************************************/
 
-/**
- * @file main.cpp
- *
- * @author Nuno Marques <nuno@auterion.com>
- */
+#include "helpers.hpp"
 
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/signalfd.h>
-#include <unistd.h>
+void help_argv_description(const char* pgm) {
+	std::cout
+	    << pgm
+	    << " [OPTIONS...]\n\n"
+	       "  -m --mavlink-port      MAVLink port to connect the Autopilot Manager thorugh UDP. Default: 14540\n"
+	       "  -h --help              Print this message\n";
+}
 
-#include <mavsdk/mavsdk.h>
+void parse_argv(int argc, char* const argv[], uint32_t& mavlink_port) {
+	static const struct option options[] = {{"mavlink-port", required_argument, nullptr, 'm'},
+						{"help", no_argument, nullptr, 'h'}};
 
-#include "helpers/helpers.hpp"
-#include "modules/MissionManager.hpp"
+	int c;
+	bool invalid_argument = false;
 
-int main(int argc, char* argv[]) {
-	uint32_t mavlink_port{14540};
-
-	parse_argv(argc, argv, mavlink_port);
-
-	std::cout << mavlink_port;
-
-	// Configure MAVSDK Mission Manager instance
-	mavsdk::Mavsdk mavsdk_mission_computer;
-
-	// Change configuration so the instance is treated as a mission computer
-	mavsdk::Mavsdk::Configuration config_cc(mavsdk::Mavsdk::Configuration::UsageType::CompanionComputer);
-	mavsdk_mission_computer.set_configuration(config_cc);
-
-	auto system = std::shared_ptr<mavsdk::System>{nullptr};
-
-	mavsdk::ConnectionResult ret_comp = mavsdk_mission_computer.add_udp_connection(mavlink_port);
-	if (ret_comp == mavsdk::ConnectionResult::Success) {
-		std::cout << "Waiting to discover vehicle from the mission computer side..." << std::endl;
-		std::promise<void> prom;
-		std::future<void> fut = prom.get_future();
-
-		mavsdk_mission_computer.subscribe_on_new_system([&prom, &mavsdk_mission_computer, &system]() {
-			for (const auto& sys : mavsdk_mission_computer.systems()) {
-				if (sys->has_autopilot()) {
-					system = sys;
-					prom.set_value();
-					break;
-				}
-			}
-		});
-
-		fut.wait_for(std::chrono::seconds(10));
-
-		// Start the Mission Manager module
-		auto mission_manager = std::make_shared<MissionManager>(system);
-
-	} else {
-		std::cerr << "Failed to connect to port " << mavlink_port << std::endl;
+	while ((c = getopt_long(argc, argv, "m:h", options, nullptr)) >= 0) {
+		switch (c) {
+			case 'h':
+				help_argv_description(argv[0]);
+				exit(0);
+			case 'm':
+				if (!atoi(optarg)) {
+					invalid_argument = true;
+				} else {
+                    mavlink_port = atoi(optarg);
+                }
+				break;
+			case '?':
+			default:
+				help_argv_description(argv[0]);
+				exit(-1);
+		}
+	}
+	/* positional arguments */
+	if (optind != argc || invalid_argument) {
+		std::cerr << "Invalid argument" << std::endl;
+		help_argv_description(argv[0]);
+		exit(-1);
 	}
 }

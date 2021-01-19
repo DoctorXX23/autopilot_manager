@@ -44,7 +44,6 @@
 #include <iostream>
 #include <string>
 
-#include <mavsdk/mavsdk.h>
 #include "ModuleBase.hpp"
 
 // MAVSDK dependencies
@@ -52,16 +51,15 @@
 #include <mavsdk/plugins/custom_action/custom_action.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
-class MissionManager : public ModuleBase {
+class CustomActionHandler {
 public:
-	MissionManager(std::shared_ptr<mavsdk::System> system);
-	~MissionManager();
-	MissionManager(const MissionManager&) = delete;
-	const MissionManager& operator=(const MissionManager&) = delete;
+	CustomActionHandler(std::shared_ptr<mavsdk::System> system);
+	~CustomActionHandler() = default;
+	CustomActionHandler(const CustomActionHandler&) = delete;
+	const CustomActionHandler& operator=(const CustomActionHandler&) = delete;
 
-	int init() override;
-	void deinit() override;
-	void run() override;
+	int start();
+	void run();
 
 private:
 	std::shared_ptr<mavsdk::System> _mavsdk_system;
@@ -87,4 +85,20 @@ private:
 	void send_progress_status(mavsdk::CustomAction::ActionToExecute action);
 	void process_custom_action(mavsdk::CustomAction::ActionToExecute action);
 	void execute_custom_action(mavsdk::CustomAction::ActionMetadata action_metadata);
+};
+
+class MissionManager : public ModuleBase {
+public:
+	MissionManager(std::shared_ptr<mavsdk::System> system);
+	~MissionManager();
+	MissionManager(const MissionManager&) = delete;
+	const MissionManager& operator=(const MissionManager&) = delete;
+
+	void init() override;
+	void deinit() override;
+	void run() override;
+
+private:
+	std::shared_ptr<mavsdk::System> _mavsdk_system;
+	std::shared_ptr<CustomActionHandler> _custom_action_handler;
 };

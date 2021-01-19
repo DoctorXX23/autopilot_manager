@@ -13,6 +13,7 @@ else()
     add_definitions("-WX -W2")
 endif()
 
+add_subdirectory(src/helpers)
 add_subdirectory(src/modules)
 
 add_executable(
@@ -23,6 +24,7 @@ add_executable(
 target_link_libraries(
     autopilot-manager
     mission-manager
+    helpers
 )
 
 # Install autopilot-manager
