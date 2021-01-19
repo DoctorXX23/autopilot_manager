@@ -15,5 +15,8 @@ cmake --build build -j$(nproc --all)
 # Usage
 
 ```bash
-./autopilot_manager ...
+$ autopilot-manager [OPTIONS...]
+
+  -m --mavlink-port      MAVLink port to connect the Autopilot Manager MAVSDK instance through UDP. Default: 14540
+  -h --help              Print this message
 ```
