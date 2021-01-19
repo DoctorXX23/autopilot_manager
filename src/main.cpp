@@ -71,11 +71,13 @@ int main(int argc, char* argv[]) {
 		std::future<void> fut = prom.get_future();
 
 		mavsdk_mission_computer.subscribe_on_new_system([&prom, &mavsdk_mission_computer, &system]() {
-			for (const auto& sys : mavsdk_mission_computer.systems()) {
-				if (sys->has_autopilot()) {
-					system = sys;
-					prom.set_value();
-					break;
+			if (system == nullptr) {
+				for (const auto& sys : mavsdk_mission_computer.systems()) {
+					if (sys->has_autopilot()) {
+						system = sys;
+						prom.set_value();
+						break;
+					}
 				}
 			}
 		});
