@@ -171,7 +171,7 @@ void CustomActionHandler::process_custom_action(mavsdk::CustomAction::ActionToEx
 	std::promise<mavsdk::CustomAction::ActionMetadata> prom;
 	std::future<mavsdk::CustomAction::ActionMetadata> fut = prom.get_future();
 	_custom_action->custom_action_metadata_async(
-	    action, "data/example/custom_action/custom_action.json",
+	    action, "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json",
 	    [&prom](mavsdk::CustomAction::Result result, mavsdk::CustomAction::ActionMetadata action_metadata) {
 		    prom.set_value(action_metadata);
 		    // if (result != mavsdk::CustomAction::Result::Success) {
