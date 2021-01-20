@@ -8,8 +8,13 @@ An AuterionOS service for higher level interactivity with onboard and flight con
 # Build
 
 ```bash
-cmake -Bbuild -S.
+cmake -Bbuild -DCUSTOM_ACTION_DATA_DIR=<desired_path_to_install_data> -S.
 cmake --build build -j$(nproc --all)
+```
+
+To install system-wide:
+```bash
+cmake --build build -j$(nproc --all) -- target install
 ```
 
 # Usage
