@@ -121,12 +121,21 @@ void CustomActionHandler::run() {
 
 	auto new_actions_check_th = std::thread(&CustomActionHandler::new_action_check, this);
 
+	auto new_action_time = std::chrono::system_clock::now() + std::chrono::minutes(1); // dummy init
+	auto start_time = new_action_time;
+
 	// Get the custom action to process
-	_custom_action->subscribe_custom_action([this](mavsdk::CustomAction::ActionToExecute action_to_exec) {
+	_custom_action->subscribe_custom_action([this, &start_time, &new_action_time](mavsdk::CustomAction::ActionToExecute action_to_exec) {
 		if (_actions.empty() || (!_actions.empty() && _actions.back().id != action_to_exec.id)) {
-			_actions.push_back(action_to_exec);
-			_new_action.store(true, std::memory_order_relaxed);
-			std::cout << "New action received with ID " << action_to_exec.id << std::endl;
+			auto now = std::chrono::system_clock::now();
+			// This is a safeguard and a workaround in case the FMU sends consecutive MAV_CMDs because he didn't get an ACK
+			if (new_action_time == start_time || std::chrono::duration_cast<std::chrono::milliseconds>(now - new_action_time).count() >= 1500) {
+				_actions.push_back(action_to_exec);
+				_new_action.store(true, std::memory_order_relaxed);
+				std::cout << "New action received with ID " << action_to_exec.id << std::endl;
+				new_action_time = now;
+			}
+
 		}
 	});
 
