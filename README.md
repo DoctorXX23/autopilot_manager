@@ -1,7 +1,7 @@
 <img align="right" height="20" src="https://auterion.com/wp-content/uploads/2020/05/auterion_logo_default_sunrise.svg">
 
 # Autopilot Manager
-[![Build and Test](https://github.com/Auterion/autopilot_manager/workflows/Build%20and%20Test/badge.svg?branch=main)](https://github.com/Auterion/autopilot_manager/actions)
+[![Build in Ubuntu](https://github.com/Auterion/autopilot_manager/workflows/Build%20in%20Ubuntu/badge.svg?branch=main)](https://github.com/Auterion/autopilot_manager/actions?query=workflow%3A%22Build+in+Ubuntu%22)
 
 An AuterionOS service for higher level interactivity with onboard and flight controller components, using Auterion SDKs and MAVSDK.
 
