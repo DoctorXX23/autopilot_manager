@@ -50,8 +50,10 @@
 
 int main(int argc, char* argv[]) {
 	uint32_t mavlink_port{14590};
+	std::string path_to_custom_action_file{"/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
+	// std::string path_to_custom_action_file{"/usr/local/share/autopilot-manager/data/example/custom_action/custom_action.json"};
 
-	parse_argv(argc, argv, mavlink_port);
+	parse_argv(argc, argv, mavlink_port, path_to_custom_action_file);
 
 	std::cout << mavlink_port;
 
@@ -85,7 +87,7 @@ int main(int argc, char* argv[]) {
 		fut.wait_for(std::chrono::seconds(10));
 
 		// Start the Mission Manager module
-		auto mission_manager = std::make_shared<MissionManager>(system);
+		auto mission_manager = std::make_shared<MissionManager>(system, path_to_custom_action_file);
 
 	} else {
 		std::cerr << "Failed to connect to port " << mavlink_port << std::endl;

@@ -66,13 +66,16 @@ static void wait_for_termination_signal() {
 	}
 }
 
-MissionManager::MissionManager(std::shared_ptr<mavsdk::System> system) : _mavsdk_system{system} { this->init(); }
+MissionManager::MissionManager(std::shared_ptr<mavsdk::System> system, const std::string &path_to_custom_action_file)
+    : _mavsdk_system{system}, _path_to_custom_action_file{path_to_custom_action_file} {
+	this->init();
+}
 
 MissionManager::~MissionManager() { this->deinit(); }
 
 void MissionManager::init() {
 	std::cout << "Mission Manager started!" << std::endl;
-	_custom_action_handler = std::make_shared<CustomActionHandler>(_mavsdk_system);
+	_custom_action_handler = std::make_shared<CustomActionHandler>(_mavsdk_system, _path_to_custom_action_file);
 
 	this->run();
 }
@@ -86,7 +89,9 @@ void MissionManager::run() {
 	}
 }
 
-CustomActionHandler::CustomActionHandler(std::shared_ptr<mavsdk::System> system) : _mavsdk_system{system} {}
+CustomActionHandler::CustomActionHandler(std::shared_ptr<mavsdk::System> system,
+					 const std::string &path_to_custom_action_file)
+    : _mavsdk_system{system}, _path_to_custom_action_file{path_to_custom_action_file} {}
 
 int CustomActionHandler::start() {
 	if (_mavsdk_system->is_connected() && _mavsdk_system->has_autopilot()) {
@@ -171,7 +176,7 @@ void CustomActionHandler::process_custom_action(mavsdk::CustomAction::ActionToEx
 	std::promise<mavsdk::CustomAction::ActionMetadata> prom;
 	std::future<mavsdk::CustomAction::ActionMetadata> fut = prom.get_future();
 	_custom_action->custom_action_metadata_async(
-	    action, "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json",
+	    action, _path_to_custom_action_file,
 	    [&prom](mavsdk::CustomAction::Result result, mavsdk::CustomAction::ActionMetadata action_metadata) {
 		    prom.set_value(action_metadata);
 		    // if (result != mavsdk::CustomAction::Result::Success) {

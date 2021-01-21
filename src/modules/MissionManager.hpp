@@ -53,7 +53,7 @@
 
 class CustomActionHandler {
 public:
-	CustomActionHandler(std::shared_ptr<mavsdk::System> system);
+	CustomActionHandler(std::shared_ptr<mavsdk::System> system, const std::string &path_to_custom_action_file);
 	~CustomActionHandler() = default;
 	CustomActionHandler(const CustomActionHandler&) = delete;
 	const CustomActionHandler& operator=(const CustomActionHandler&) = delete;
@@ -65,6 +65,8 @@ private:
 	std::shared_ptr<mavsdk::System> _mavsdk_system;
 	std::shared_ptr<mavsdk::CustomAction> _custom_action;
 	std::shared_ptr<mavsdk::Telemetry> _telemetry;
+
+	std::string _path_to_custom_action_file;
 
 	std::atomic<bool> _received_custom_action{false};
 	std::atomic<bool> _mission_finished{false};
@@ -89,7 +91,7 @@ private:
 
 class MissionManager : public ModuleBase {
 public:
-	MissionManager(std::shared_ptr<mavsdk::System> system);
+	MissionManager(std::shared_ptr<mavsdk::System> system, const std::string &path_to_custom_action_file);
 	~MissionManager();
 	MissionManager(const MissionManager&) = delete;
 	const MissionManager& operator=(const MissionManager&) = delete;
@@ -101,4 +103,6 @@ public:
 private:
 	std::shared_ptr<mavsdk::System> _mavsdk_system;
 	std::shared_ptr<CustomActionHandler> _custom_action_handler;
+
+	std::string _path_to_custom_action_file;
 };

@@ -21,7 +21,9 @@ cmake --build build -j$(nproc --all) -- target install
 
 ```bash
 $ autopilot-manager [OPTIONS...]
-
-  -m --mavlink-port      MAVLink port to connect the Autopilot Manager MAVSDK instance through UDP. Default: 14540
-  -h --help              Print this message
+  -f --file-custom-action-config	 Absolute path to configuration file of the custom actions.
+                                        Default: /usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json
+  -m --mavlink-port			 MAVLink port to connect the Autopilot Manager MAVSDK instance
+                                        through UDP. Default: 14570
+  -h --help				 Print this message
 ```
