@@ -272,4 +272,7 @@ void CustomActionHandler::execute_custom_action(mavsdk::CustomAction::ActionMeta
 	} else if (!_action_stopped.load() && _actions_progress.back() == 100) {
 		std::cout << "Custom action #" << _actions_metadata.back().id << " executed!" << std::endl;
 	}
+
+	// clear actions after they are processed
+	_actions.clear();
 }
