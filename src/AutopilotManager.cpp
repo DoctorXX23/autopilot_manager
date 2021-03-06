@@ -12,6 +12,11 @@ AutopilotManager::AutopilotManager(const std::string& mavlinkPort, const std::st
       _custom_action_config_path(customActionConfigPath.empty() ? _custom_action_config_path : customActionConfigPath) {
 	initialProvisioning();
 
+	// Register autopilot_manager dbus requests
+	DBusInterface dbus([this](DBusMessage* request) {
+		return this->HandleRequest(request);
+	});
+
 	if (_autopilot_manager_enabled) {
 		std::cout << "[Autopilot Manager] Status: Enabled!" << std::endl;
 
@@ -112,8 +117,6 @@ void AutopilotManager::start() {
 	    mavsdk::Mavsdk::Configuration(mavsdk::Mavsdk::Configuration::UsageType::CompanionComputer));
 
 	auto system = std::shared_ptr<mavsdk::System>{nullptr};
-
-	std::cout << "udp://:" + _mavlink_port << std::endl;
 
 	mavsdk::ConnectionResult ret_comp = mavsdk_mission_computer.add_any_connection("udp://:" + _mavlink_port);
 	if (ret_comp == mavsdk::ConnectionResult::Success) {
