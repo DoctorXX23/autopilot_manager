@@ -35,9 +35,9 @@ private:
 	ResponseCode SetConfiguration(AutopilotManagerConfig& config);
 	ResponseCode GetConfiguration(AutopilotManagerConfig& config);
 
-	uint32_t _autopilot_manager_enabled = false;
+	uint8_t _autopilot_manager_enabled = false;
 	std::string _decision_maker_input_type = "";
-	uint32_t _simple_collision_avoid_enabled = false;
+	uint8_t _simple_collision_avoid_enabled = false;
 	double _simple_collision_avoid_distance_threshold = 0.0;
 	std::string _simple_collision_avoid_distance_on_condition_true = "";
 	std::string _simple_collision_avoid_distance_on_condition_false = "";
