@@ -62,6 +62,11 @@ int main(int argc, char* argv[]) {
 	std::shared_ptr<AutopilotManager> autopilot_manager = std::make_shared<AutopilotManager>(
 	    std::to_string(mavlink_port), path_to_apm_config_file, path_to_custom_action_file);
 
+	// Register autopilot_manager dbus requests
+	DBusInterface dbus([autopilot_manager](DBusMessage* request) {
+		return autopilot_manager->HandleRequest(request);
+	});
+
 	g_main_loop_run(mainloop);
 
 	exit(0);

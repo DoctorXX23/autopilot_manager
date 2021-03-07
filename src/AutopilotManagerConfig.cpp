@@ -4,25 +4,19 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
 	if (request != nullptr) {
 		DBusError error;
 		dbus_error_init(&error);
-		bool* returnedEnabled = nullptr;
 		char* returnedDecisionMakerType = nullptr;
-		bool* returnedCollAvoidEnabled = nullptr;
-		double* returnedCollAvoidThr = nullptr;
 		char* returnedCollAvoidOnCondTrue = nullptr;
 		char* returnedCollAvoidOnCondFalse = nullptr;
-		dbus_message_get_args(request, &error, DBUS_TYPE_BOOLEAN, &returnedEnabled, DBUS_TYPE_STRING,
-				      &returnedDecisionMakerType, DBUS_TYPE_DOUBLE, &returnedCollAvoidThr,
-				      DBUS_TYPE_STRING, &returnedCollAvoidOnCondTrue, DBUS_TYPE_STRING,
+		dbus_message_get_args(request, &error, DBUS_TYPE_UINT32, &autopilot_manager_enabled, DBUS_TYPE_STRING,
+				      &returnedDecisionMakerType, DBUS_TYPE_UINT32, &simple_collision_avoid_enabled, DBUS_TYPE_DOUBLE,
+					  &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING, &returnedCollAvoidOnCondTrue, DBUS_TYPE_STRING,
 				      &returnedCollAvoidOnCondFalse, DBUS_TYPE_INVALID);
 		if (dbus_error_is_set(&error)) {
 			std::cerr << "[Autopilot Manager Config] Failed getting message arguments: " << error.message
 				  << std::endl;
 			dbus_error_free(&error);
 		} else {
-			autopilot_manager_enabled = (*returnedEnabled);
 			decision_maker_input_type = (*returnedDecisionMakerType);
-			simple_collision_avoid_enabled = (*returnedCollAvoidEnabled);
-			simple_collision_avoid_distance_threshold = (*returnedCollAvoidThr);
 			simple_collision_avoid_distance_on_condition_true = (*returnedCollAvoidOnCondTrue);
 			simple_collision_avoid_distance_on_condition_false = (*returnedCollAvoidOnCondFalse);
 
@@ -46,8 +40,8 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
 
 bool AutopilotManagerConfig::AppendToMessage(DBusMessage* reply) const {
 	if (reply != nullptr) {
-		dbus_message_append_args(reply, DBUS_TYPE_BOOLEAN, &autopilot_manager_enabled, DBUS_TYPE_STRING,
-					 &decision_maker_input_type, DBUS_TYPE_BOOLEAN, &simple_collision_avoid_enabled,
+		dbus_message_append_args(reply, DBUS_TYPE_UINT32, &autopilot_manager_enabled, DBUS_TYPE_STRING,
+					 &decision_maker_input_type, DBUS_TYPE_UINT32, &simple_collision_avoid_enabled,
 					 DBUS_TYPE_DOUBLE, &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING,
 					 &simple_collision_avoid_distance_on_condition_true, DBUS_TYPE_STRING,
 					 &simple_collision_avoid_distance_on_condition_false, DBUS_TYPE_INVALID);

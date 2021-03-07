@@ -12,11 +12,6 @@ AutopilotManager::AutopilotManager(const std::string& mavlinkPort, const std::st
       _custom_action_config_path(customActionConfigPath.empty() ? _custom_action_config_path : customActionConfigPath) {
 	initialProvisioning();
 
-	// Register autopilot_manager dbus requests
-	DBusInterface dbus([this](DBusMessage* request) {
-		return this->HandleRequest(request);
-	});
-
 	if (_autopilot_manager_enabled) {
 		std::cout << "[Autopilot Manager] Status: Enabled!" << std::endl;
 
@@ -24,7 +19,10 @@ AutopilotManager::AutopilotManager(const std::string& mavlinkPort, const std::st
 	}
 }
 
-AutopilotManager::~AutopilotManager() { _mission_manager.reset(); }
+AutopilotManager::~AutopilotManager() {
+	_mission_manager_th.join();
+	_mission_manager.reset();
+}
 
 DBusMessage* AutopilotManager::HandleRequest(DBusMessage* message) {
 	DBusMessage* reply = nullptr;
@@ -81,7 +79,7 @@ AutopilotManager::ResponseCode AutopilotManager::SetConfiguration(AutopilotManag
 	_simple_collision_avoid_distance_on_condition_true = config.simple_collision_avoid_distance_on_condition_true;
 	_simple_collision_avoid_distance_on_condition_false = config.simple_collision_avoid_distance_on_condition_false;
 
-	if (!config.simple_collision_avoid_enabled) {
+	if (!_simple_collision_avoid_enabled) {
 		return ResponseCode::SUCCEED_WITH_COLL_AVOID_OFF;
 	} else {
 		return ResponseCode::SUCCEED_WITH_COLL_AVOID_ON;
@@ -164,22 +162,17 @@ void AutopilotManager::start() {
 				_simple_collision_avoid_distance_on_condition_false};
 		});
 
-		// auto mission_manager_th = std::thread(&AutopilotManager::init_mission_manager, this);
-		_mission_manager->init();
-
-		// mission_manager_th.join();
+		_mission_manager_th = std::thread(&AutopilotManager::init_mission_manager, this);
 
 	} else {
 		std::cerr << "[Autopilot Manager] Failed to connect to port! Exiting..." << _mavlink_port << std::endl;
 		exit(1);
 	}
-
-	exit(0);
 }
 
 void AutopilotManager::init_mission_manager() {
 	// Init the Mission Manager module
-	// _mission_manager->init();
+	_mission_manager->init();
 }
 
 void AutopilotManager::init_sensor_manager() {

@@ -140,10 +140,10 @@ bool CustomActionHandler::start() {
 }
 
 void CustomActionHandler::run() {
-	while (!_telemetry->health_all_ok()) {
-		std::cout << "[Mission Manager] Waiting for system to be ready" << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
+	// while (!_telemetry->health_all_ok()) {
+	// 	std::cout << "[Mission Manager] Waiting for system to be ready" << std::endl;
+	// 	std::this_thread::sleep_for(std::chrono::seconds(1));
+	// }
 
 	std::cout << "[Mission Manager] System ready! Waiting for custom actions to process..." << std::endl;
 

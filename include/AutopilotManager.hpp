@@ -35,12 +35,14 @@ private:
 	ResponseCode SetConfiguration(AutopilotManagerConfig& config);
 	ResponseCode GetConfiguration(AutopilotManagerConfig& config);
 
-	bool _autopilot_manager_enabled = false;
+	uint32_t _autopilot_manager_enabled = false;
 	std::string _decision_maker_input_type = "";
-	bool _simple_collision_avoid_enabled = false;
+	uint32_t _simple_collision_avoid_enabled = false;
 	double _simple_collision_avoid_distance_threshold = 0.0;
 	std::string _simple_collision_avoid_distance_on_condition_true = "";
 	std::string _simple_collision_avoid_distance_on_condition_false = "";
+
+	std::thread _mission_manager_th;
 
 	std::shared_ptr<MissionManager> _mission_manager = {nullptr};
 
