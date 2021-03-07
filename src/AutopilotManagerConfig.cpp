@@ -30,7 +30,7 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
 			std::cout << "    simple_collision_avoid_enabled: " << simple_collision_avoid_enabled
 				  << std::endl;
 			std::cout << "    simple_collision_avoid_distance_threshold: "
-				  << simple_collision_avoid_distance_threshold << std::endl;
+				  << std::to_string(simple_collision_avoid_distance_threshold) << std::endl;
 			std::cout << "    simple_collision_avoid_distance_on_condition_true: "
 				  << simple_collision_avoid_distance_on_condition_true << std::endl;
 			std::cout << "    simple_collision_avoid_distance_on_condition_false: "
@@ -44,12 +44,10 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
 
 bool AutopilotManagerConfig::AppendToMessage(DBusMessage* reply) const {
 	if (reply != nullptr) {
-		const int apmEnabledInt = int(autopilot_manager_enabled);
-		const int simpleCollAvoidEnabledInt = int(simple_collision_avoid_enabled);
 		dbus_message_append_args(reply,
-					 DBUS_TYPE_UINT32, &apmEnabledInt,
+					 DBUS_TYPE_UINT32, &autopilot_manager_enabled,
 					 DBUS_TYPE_STRING, &decision_maker_input_type,
-					 DBUS_TYPE_UINT32, &simpleCollAvoidEnabledInt,
+					 DBUS_TYPE_UINT32, &simple_collision_avoid_enabled,
 					 DBUS_TYPE_DOUBLE, &simple_collision_avoid_distance_threshold,
 					 DBUS_TYPE_STRING, &simple_collision_avoid_distance_on_condition_true,
 					 DBUS_TYPE_STRING, &simple_collision_avoid_distance_on_condition_false,
