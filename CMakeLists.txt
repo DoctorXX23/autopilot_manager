@@ -62,11 +62,17 @@ install(
 
 # Install custom action JSON examples and dummy scripts
 # Note: the default directory is specific to the AuterionOS
-set(CUSTOM_ACTION_DATA_DIR "/usr/src/app/autopilot-manager/data" CACHE FILEPATH "Path to configuration filed, custom action configuration examples and scripts")
-# set(CUSTOM_ACTION_DATA_DIR "/usr/local/share/autopilot-manager/data" CACHE FILEPATH "Path to custom action JSON examples and scripts")
+set(CUSTOM_ACTION_DATA_DIR "/usr/src/app/autopilot-manager/data/example/" CACHE FILEPATH "Path to custom action configuration examples and scripts")
+# set(CUSTOM_ACTION_DATA_DIR "/usr/local/share/autopilot-manager/data/example/" CACHE FILEPATH "Path to custom action configuration examples and scripts")
 
-install(DIRECTORY data/
+set(CONFIG_DATA_DIR "/shared_container_dir/" CACHE FILEPATH "Path to autopilot manager configuration file")
+# set(CUSTOM_ACTION_DATA_DIR "/usr/local/share/autopilot-manager/data/config/" CACHE FILEPATH "Path to autopilot manager configuration file")
+
+install(DIRECTORY data/example/
   DESTINATION ${CUSTOM_ACTION_DATA_DIR})
+
+install(DIRECTORY data/config/
+  DESTINATION ${CONFIG_DATA_DIR})
 
 install(FILES com.auterion.autopilot_manager.conf
   DESTINATION /usr/share/dbus-1/system.d/)
