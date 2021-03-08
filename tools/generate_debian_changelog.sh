@@ -2,6 +2,14 @@
 
 # We want to extract "1.2.3" from "v1.2.3-5-g123abc".
 default_tag_version=`git describe --always --tags $(git rev-list --tags --max-count=1) | sed 's/v\([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/'`
+if [[ $default_tag_version: =~ ^[0-9]+(\.[0-9]+){2}$ ]];
+then
+        echo "Defaulting version to $default_tag_version"
+else
+        default_tag_version="1.0.0"
+        echo "Defaulting version to $default_tag_version"
+fi
+
 
 # Default to 1 for package version
 if [ -z "$1" ]; then
