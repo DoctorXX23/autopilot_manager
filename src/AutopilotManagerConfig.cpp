@@ -46,11 +46,14 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
 		char* returnedDecisionMakerType = nullptr;
 		char* returnedCollAvoidOnCondTrue = nullptr;
 		char* returnedCollAvoidOnCondFalse = nullptr;
-		dbus_message_get_args(request, &error, DBUS_TYPE_UINT32, &autopilot_manager_enabled, DBUS_TYPE_STRING,
-				      &returnedDecisionMakerType, DBUS_TYPE_UINT32, &simple_collision_avoid_enabled,
-				      DBUS_TYPE_DOUBLE, &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING,
-				      &returnedCollAvoidOnCondTrue, DBUS_TYPE_STRING, &returnedCollAvoidOnCondFalse,
-				      DBUS_TYPE_INVALID);
+		dbus_message_get_args(request, &error,
+	                            DBUS_TYPE_UINT32,   &autopilot_manager_enabled,
+	                            DBUS_TYPE_STRING,   &returnedDecisionMakerType,
+	                            DBUS_TYPE_UINT32,   &simple_collision_avoid_enabled,
+	                            DBUS_TYPE_DOUBLE,   &simple_collision_avoid_distance_threshold,
+	                            DBUS_TYPE_STRING,   &returnedCollAvoidOnCondTrue,
+	                            DBUS_TYPE_STRING,   &returnedCollAvoidOnCondFalse,
+	                            DBUS_TYPE_INVALID);
 		if (dbus_error_is_set(&error)) {
 			std::cerr << "[Autopilot Manager Config] Failed getting message arguments: " << error.message
 				  << std::endl;
