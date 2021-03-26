@@ -2,7 +2,7 @@
 # This script checks whether running the fix_style.sh script makes any changes
 
 # Fix style recursively in all the repository
-sh scripts/fix_style.sh .
+sh tools/fix_style.sh .
 
 # Print the diff with the remote branch (empty if no diff)
 git --no-pager diff -U0 --color

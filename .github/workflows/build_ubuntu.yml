@@ -50,6 +50,10 @@ jobs:
         sudo ldconfig
         # Install DBUS
         sudo apt install -y libdbus-glib-1-dev
+        # Install Clang formatter
+        sudo apt install -y clang-format-10
+    - name: Check code formatting
+      run: tools/check_code_format.sh
     - name: Build
       run: |
         mkdir -p colcon_ws/src

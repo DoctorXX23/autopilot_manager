@@ -10,7 +10,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # find clang format binary
-for clang_binary in clang-format-9; do
+for clang_binary in clang-format-10; do
 	[ -x "$(command -v ${clang_binary})" ] && CLANG_FORMAT_BINARY=${clang_binary}
 done
 if [ -z $CLANG_FORMAT_BINARY ]; then
