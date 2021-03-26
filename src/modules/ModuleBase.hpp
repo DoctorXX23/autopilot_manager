@@ -40,41 +40,41 @@
 #pragma once
 
 class ModuleBase {
-public:
-	/**
-	 * @brief Default Constructor.
-	 */
-	ModuleBase() = default;
+   public:
+    /**
+     * @brief Default Constructor.
+     */
+    ModuleBase() = default;
 
-	/**
-	 * @brief Default Destructor.
-	 */
-	virtual ~ModuleBase() = default;
+    /**
+     * @brief Default Destructor.
+     */
+    virtual ~ModuleBase() = default;
 
-	/**
-	 * @brief Copy constructor (object is not copyable).
-	 */
-	ModuleBase(const ModuleBase&) = delete;
+    /**
+     * @brief Copy constructor (object is not copyable).
+     */
+    ModuleBase(const ModuleBase&) = delete;
 
-	/**
-	 * @brief Assign operator (object is not copyable).
-	 */
-	const ModuleBase& operator=(const ModuleBase&) = delete;
+    /**
+     * @brief Assign operator (object is not copyable).
+     */
+    const ModuleBase& operator=(const ModuleBase&) = delete;
 
-	/**
-	 * @brief Module init
-	 */
-	virtual void init() = 0;
+    /**
+     * @brief Module init
+     */
+    virtual void init() = 0;
 
-	/**
-	 * @brief Module deinit
-	 */
-	virtual void deinit() = 0;
+    /**
+     * @brief Module deinit
+     */
+    virtual void deinit() = 0;
 
-	/**
-	 * @brief Module run
-	 */
-	virtual void run() = 0;
+    /**
+     * @brief Module run
+     */
+    virtual void run() = 0;
 
-private:
+   private:
 };

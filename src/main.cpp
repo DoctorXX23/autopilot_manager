@@ -37,42 +37,39 @@
  * @author Nuno Marques <nuno@auterion.com>
  */
 
-#include <DbusInterface.hpp>
-
 #include <AutopilotManager.hpp>
+#include <DbusInterface.hpp>
 #include <helpers.hpp>
-
 #include <rclcpp/rclcpp.hpp>
 
 int main(int argc, char* argv[]) {
-	uint32_t mavlink_port{14590};
-	std::string path_to_apm_config_file{"/shared_container_dir/autopilot_manager.conf"};
-	std::string path_to_custom_action_file{
-	    "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
-	// std::string
-	// path_to_custom_action_file{"/usr/local/share/autopilot-manager/data/example/custom_action/custom_action.json"};
+    uint32_t mavlink_port{14590};
+    std::string path_to_apm_config_file{"/shared_container_dir/autopilot_manager.conf"};
+    std::string path_to_custom_action_file{
+        "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
+    // std::string
+    // path_to_custom_action_file{"/usr/local/share/autopilot-manager/data/example/custom_action/custom_action.json"};
 
-	parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
+    parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
 
-	// Initialize communications via the rmw implementation and set up a global signal handler.
-	rclcpp::init(argc, argv);
+    // Initialize communications via the rmw implementation and set up a global signal handler.
+    rclcpp::init(argc, argv);
 
-	// Uninstall the global signal handler for rclcpp
-	rclcpp::uninstall_signal_handlers();
+    // Uninstall the global signal handler for rclcpp
+    rclcpp::uninstall_signal_handlers();
 
-	// Init main event loop for GLib/DBUS
-	GMainLoop* mainloop = g_main_loop_new(NULL, false);
+    // Init main event loop for GLib/DBUS
+    GMainLoop* mainloop = g_main_loop_new(NULL, false);
 
-	std::shared_ptr<AutopilotManager> autopilot_manager = std::make_shared<AutopilotManager>(
-	    std::to_string(mavlink_port), path_to_apm_config_file, path_to_custom_action_file);
+    auto autopilot_manager = std::make_shared<AutopilotManager>(std::to_string(mavlink_port), path_to_apm_config_file,
+                                                                path_to_custom_action_file);
 
-	// Register autopilot_manager dbus requests
-	DBusInterface dbus(
-	    [autopilot_manager](DBusMessage* request) { return autopilot_manager->HandleRequest(request); });
+    // Register autopilot_manager dbus requests
+    DBusInterface dbus([autopilot_manager](DBusMessage* request) { return autopilot_manager->HandleRequest(request); });
 
-	g_main_loop_run(mainloop);
+    g_main_loop_run(mainloop);
 
-	rclcpp::shutdown();
+    rclcpp::shutdown();
 
-	return 0;
+    return 0;
 }

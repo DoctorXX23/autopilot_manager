@@ -40,56 +40,56 @@
 #include "helpers.hpp"
 
 void help_argv_description(const char* pgm) {
-	std::cout << pgm
-		  << " [OPTIONS...]\n\n"
-		     "  -a --file-custom-action-config	Absolute path to configuration file of the custom actions.\n"
-		     "\t\t\t\t\tDefault: /usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json\n"
-		     "  -c --file-autopilot-manager-config	Absolute path to configuration file of the overall "
-		     "autopilot manager service.\n"
-		     "\t\t\t\t\tDefault: /shared_container_dir/autopilot_manager.conf\n"
-		     "  -m --mavlink-port			MAVLink port to connect the Autopilot "
-		     "Manager MAVSDK instance\n\t\t\t\t\tthrough UDP. Default: 14570\n"
-		     "  -h --help				Print this message\n";
+    std::cout << pgm
+              << " [OPTIONS...]\n\n"
+                 "  -a --file-custom-action-config	Absolute path to configuration file of the custom actions.\n"
+                 "\t\t\t\t\tDefault: /usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json\n"
+                 "  -c --file-autopilot-manager-config	Absolute path to configuration file of the overall "
+                 "autopilot manager service.\n"
+                 "\t\t\t\t\tDefault: /shared_container_dir/autopilot_manager.conf\n"
+                 "  -m --mavlink-port			MAVLink port to connect the Autopilot "
+                 "Manager MAVSDK instance\n\t\t\t\t\tthrough UDP. Default: 14570\n"
+                 "  -h --help				Print this message\n";
 }
 
 void parse_argv(int argc, char* const argv[], uint32_t& mavlink_port, std::string& path_to_apm_config_file,
-		std::string& path_to_custom_action_config_file) {
-	static const struct option options[] = {{"file-custom-action-config", required_argument, nullptr, 'a'},
-						{"file-autopilot-manager-config", required_argument, nullptr, 'c'},
-						{"mavlink-port", required_argument, nullptr, 'm'},
-						{"help", no_argument, nullptr, 'h'}};
+                std::string& path_to_custom_action_config_file) {
+    static const struct option options[] = {{"file-custom-action-config", required_argument, nullptr, 'a'},
+                                            {"file-autopilot-manager-config", required_argument, nullptr, 'c'},
+                                            {"mavlink-port", required_argument, nullptr, 'm'},
+                                            {"help", no_argument, nullptr, 'h'}};
 
-	int c;
-	bool invalid_argument = false;
+    int c;
+    bool invalid_argument = false;
 
-	while ((c = getopt_long(argc, argv, "a:c:hm:", options, nullptr)) >= 0) {
-		switch (c) {
-			case 'h':
-				help_argv_description(argv[0]);
-				exit(0);
-			case 'a':
-				path_to_custom_action_config_file = std::string(optarg);
-				break;
-			case 'c':
-				path_to_apm_config_file = std::string(optarg);
-				break;
-			case 'm':
-				if (!atoi(optarg)) {
-					invalid_argument = true;
-				} else {
-					mavlink_port = atoi(optarg);
-				}
-				break;
-			case '?':
-			default:
-				help_argv_description(argv[0]);
-				exit(-1);
-		}
-	}
-	/* positional arguments */
-	if (optind != argc || invalid_argument) {
-		std::cerr << "Invalid argument" << std::endl;
-		help_argv_description(argv[0]);
-		exit(-1);
-	}
+    while ((c = getopt_long(argc, argv, "a:c:hm:", options, nullptr)) >= 0) {
+        switch (c) {
+            case 'h':
+                help_argv_description(argv[0]);
+                exit(0);
+            case 'a':
+                path_to_custom_action_config_file = std::string(optarg);
+                break;
+            case 'c':
+                path_to_apm_config_file = std::string(optarg);
+                break;
+            case 'm':
+                if (!atoi(optarg)) {
+                    invalid_argument = true;
+                } else {
+                    mavlink_port = atoi(optarg);
+                }
+                break;
+            case '?':
+            default:
+                help_argv_description(argv[0]);
+                exit(-1);
+        }
+    }
+    /* positional arguments */
+    if (optind != argc || invalid_argument) {
+        std::cerr << "Invalid argument" << std::endl;
+        help_argv_description(argv[0]);
+        exit(-1);
+    }
 }

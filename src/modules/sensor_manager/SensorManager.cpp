@@ -49,59 +49,58 @@ using PIXEL = float;
 SensorManager::SensorManager() : Node("sensor_manager") { init(); }
 
 SensorManager::~SensorManager() {
-	// deinit();
+    // deinit();
 }
 
 void SensorManager::init() {
-	std::cout << "[Sensor Manager] Started!" << std::endl;
+    std::cout << "[Sensor Manager] Started!" << std::endl;
 
-	rclcpp::SensorDataQoS qos;
-	qos.keep_last(10);
-	qos.best_effort();  // For Gazebo sensors output, the QoS setting need to be set to Best Effort
+    rclcpp::SensorDataQoS qos;
+    qos.keep_last(10);
+    qos.best_effort();  // For Gazebo sensors output, the QoS setting need to be set to Best Effort
 
-	_depth_image_sub = this->create_subscription<sensor_msgs::msg::Image>(
-	    "/camera/depth/image_raw", qos, std::bind(&SensorManager::handle_incoming_depth_image, this, _1));
+    _depth_image_sub = this->create_subscription<sensor_msgs::msg::Image>(
+        "/camera/depth/image_raw", qos, std::bind(&SensorManager::handle_incoming_depth_image, this, _1));
 }
 
 void SensorManager::deinit() { _depth_image_sub.reset(); }
 
 void SensorManager::run() {
-	// Not used
+    // Not used
 }
 
 void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg) {
-	// make an Eigen wrapper around the memory
-	auto img =
-	    Eigen::Map<const Eigen::Matrix<PIXEL, -1, -1>>((const PIXEL*)(&msg->data[0]), msg->height, msg->width);
+    // make an Eigen wrapper around the memory
+    auto img = Eigen::Map<const Eigen::Matrix<PIXEL, -1, -1>>((const PIXEL*)(&msg->data[0]), msg->height, msg->width);
 
-	// make a local copy of the ROI settings
-	ROISettings local_settings;
-	{
-		std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-		local_settings = _roi_settings;
-	}
+    // make a local copy of the ROI settings
+    ROISettings local_settings;
+    {
+        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+        local_settings = _roi_settings;
+    }
 
-	int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
-	int64_t rows_pixels = static_cast<int64_t>(local_settings.height_fraction * img.rows());
-	int64_t cols_offset =
-	    static_cast<int64_t>((local_settings.width_center - 0.5f * local_settings.width_fraction) * img.cols());
-	int64_t rows_offset =
-	    static_cast<int64_t>((local_settings.height_center - 0.5f * local_settings.height_fraction) * img.rows());
+    int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
+    int64_t rows_pixels = static_cast<int64_t>(local_settings.height_fraction * img.rows());
+    int64_t cols_offset =
+        static_cast<int64_t>((local_settings.width_center - 0.5f * local_settings.width_fraction) * img.cols());
+    int64_t rows_offset =
+        static_cast<int64_t>((local_settings.height_center - 0.5f * local_settings.height_fraction) * img.rows());
 
-	float depth = NAN;
+    float depth = NAN;
 
-	// check that settings are OK
-	if (cols_pixels > 0 && cols_pixels < img.cols() && rows_pixels > 0 && rows_pixels < img.rows() &&
-	    cols_offset >= 0 && cols_offset + cols_pixels < img.cols() && rows_offset >= 0 &&
-	    rows_offset + rows_pixels < img.rows()) {
-		depth = img.block(rows_offset, cols_offset, rows_pixels, cols_pixels)
-			    .array()
-			    .isNaN()
-			    .select(std::numeric_limits<PIXEL>::max(),
-				    img.block(rows_offset, cols_offset, rows_pixels, cols_pixels))
-			    .minCoeff();
-	}
+    // check that settings are OK
+    if (cols_pixels > 0 && cols_pixels < img.cols() && rows_pixels > 0 && rows_pixels < img.rows() &&
+        cols_offset >= 0 && cols_offset + cols_pixels < img.cols() && rows_offset >= 0 &&
+        rows_offset + rows_pixels < img.rows()) {
+        depth = img.block(rows_offset, cols_offset, rows_pixels, cols_pixels)
+                    .array()
+                    .isNaN()
+                    .select(std::numeric_limits<PIXEL>::max(),
+                            img.block(rows_offset, cols_offset, rows_pixels, cols_pixels))
+                    .minCoeff();
+    }
 
-	std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-	_depth = (depth == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
+    std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+    _depth = (depth == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
 }
