@@ -68,10 +68,11 @@ target_include_directories(autopilot-manager
 install(
   TARGETS autopilot-manager
   ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  RUNTIME DESTINATION bin/${PROJECT_NAME}
-  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib/${PROJECT_NAME}
   INCLUDES DESTINATION include
 )
+# To run with 'ros2 run':
 install(TARGETS autopilot-manager
   DESTINATION
   lib/${PROJECT_NAME}
@@ -83,7 +84,7 @@ set(CUSTOM_ACTION_DATA_DIR "/usr/src/app/autopilot-manager/data/example/" CACHE 
 # set(CUSTOM_ACTION_DATA_DIR "/usr/local/share/autopilot-manager/data/example/" CACHE FILEPATH "Path to custom action configuration examples and scripts")
 
 set(CONFIG_DATA_DIR "/shared_container_dir/" CACHE FILEPATH "Path to autopilot manager configuration file")
-# set(CUSTOM_ACTION_DATA_DIR "/usr/local/share/autopilot-manager/data/config/" CACHE FILEPATH "Path to autopilot manager configuration file")
+# set(CONFIG_DATA_DIR "/usr/local/share/autopilot-manager/data/config/" CACHE FILEPATH "Path to autopilot manager configuration file")
 
 # install(DIRECTORY data/example/
 #   DESTINATION ${CUSTOM_ACTION_DATA_DIR})
