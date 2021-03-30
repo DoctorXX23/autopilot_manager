@@ -211,9 +211,6 @@ void AutopilotManager::start() {
         std::cerr << "[Autopilot Manager] Failed to connect to port! Exiting..." << _mavlink_port << std::endl;
         exit(1);
     }
-
-    _mission_manager->deinit();
-    _sensor_manager->deinit();
 }
 
 void AutopilotManager::run_sensor_manager() {

@@ -55,9 +55,9 @@ static constexpr auto sensorManagerOut = "[Sensor Manager]";
 class SensorManager : public rclcpp::Node, ModuleBase {
    public:
     SensorManager();
-    ~SensorManager() override = default;
+    ~SensorManager();
     SensorManager(const SensorManager&) = delete;
-    const SensorManager& operator=(const SensorManager&) = delete;
+    auto operator=(const SensorManager&) -> const SensorManager& = delete;
 
     auto init() -> void override;
     auto deinit() -> void override;

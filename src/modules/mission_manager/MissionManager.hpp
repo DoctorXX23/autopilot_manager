@@ -92,9 +92,9 @@ class CustomActionHandler {
 class MissionManager : public ModuleBase {
    public:
     MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, const std::string& path_to_custom_action_file);
-    ~MissionManager() override = default;
+    ~MissionManager();
     MissionManager(const MissionManager&) = delete;
-    const MissionManager& operator=(const MissionManager&) = delete;
+    auto operator=(const MissionManager&) -> const MissionManager& = delete;
 
     void init() override;
     void deinit() override;

@@ -44,6 +44,8 @@ using PIXEL = float;
 
 SensorManager::SensorManager() : Node("sensor_manager") {}
 
+SensorManager::~SensorManager() { deinit(); }
+
 void SensorManager::init() {
     std::cout << sensorManagerOut << " Started!" << std::endl;
 

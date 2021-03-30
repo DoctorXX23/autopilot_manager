@@ -56,6 +56,8 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
       _mission_manager_config{},
       _mavsdk_system{std::move(mavsdk_system)} {}
 
+MissionManager::~MissionManager() { deinit(); }
+
 void MissionManager::init() {
     std::cout << missionManagerOut << " Started!" << std::endl;
     _custom_action_handler = std::make_shared<CustomActionHandler>(_mavsdk_system, _path_to_custom_action_file);
