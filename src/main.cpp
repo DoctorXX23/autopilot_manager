@@ -49,8 +49,6 @@ auto main(int argc, char* argv[]) -> int {
     std::string path_to_apm_config_file{"/shared_container_dir/autopilot_manager.conf"};
     std::string path_to_custom_action_file{
         "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
-    // std::string
-    // path_to_custom_action_file{"/usr/local/share/autopilot-manager/data/example/custom_action/custom_action.json"};
 
     parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
 

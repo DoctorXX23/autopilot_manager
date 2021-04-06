@@ -82,13 +82,22 @@ set(CUSTOM_ACTION_DATA_DIR "share/${PROJECT_NAME}/data/example/" CACHE FILEPATH 
 set(CONFIG_DATA_DIR "share/${PROJECT_NAME}/data/config/" CACHE FILEPATH "Path to autopilot manager default parameters file")
 set(DBUS_CONFIG_DIR "share/${PROJECT_NAME}/dbus/" CACHE FILEPATH "Path to autopilot manager DBUS configuration file")
 
+# ## Note for usage in the Skynode: ##
+# As the Autopilot Manager will be installed in a read-only partition,
+# this file should be copied/moved manually to /shared_container_dir/
+# if there is a need to edit it. Otherwise, one can create a new JSON
+# file and load it using the provided '-a' option
 install(DIRECTORY data/example/
   DESTINATION ${CUSTOM_ACTION_DATA_DIR})
 
+# ## Note for usage in the Skynode: ##
+# As the Autopilot Manager will be installed in a read-only partition,
+# this file should be copied/moved manually to /shared_container_dir/.
+# A different file can be used and loaded through the '-c' option
 install(DIRECTORY data/config/
   DESTINATION ${CONFIG_DATA_DIR})
 
-# This should be copied manually to /usr/share/dbus-1/system.d/
+# This should be copied/moved manually to /usr/share/dbus-1/system.d/
 install(FILES com.auterion.autopilot_manager.conf
   DESTINATION ${DBUS_CONFIG_DIR})
 
