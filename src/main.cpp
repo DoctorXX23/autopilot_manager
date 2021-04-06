@@ -42,10 +42,10 @@
 #include <helpers.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-constexpr uint32_t sitl_mavlink_port = 14590;
+constexpr uint32_t mavlink_router_port = 14590;
 
 auto main(int argc, char* argv[]) -> int {
-    uint32_t mavlink_port{sitl_mavlink_port};
+    uint32_t mavlink_port{mavlink_router_port};
     std::string path_to_apm_config_file{"/shared_container_dir/autopilot_manager.conf"};
     std::string path_to_custom_action_file{
         "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
