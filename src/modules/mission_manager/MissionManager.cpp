@@ -99,10 +99,10 @@ void MissionManager::decision_maker_run() {
 
         if (_mission_manager_config.decision_maker_input_type == "SIMPLE_COLLISION_AVOIDANCE") {
             if (_mission_manager_config.simple_collision_avoid_enabled != 0U) {
-                std::cout << "Depth measured: " << _distance_to_obstacle_update_callback()
-                          << " | threshold: " << _mission_manager_config.simple_collision_avoid_distance_threshold
-                          << " | altitude to home: " << _telemetry->position_velocity_ned().position.down_m
-                          << " | is action triggered? " << std::boolalpha << _action_triggered << std::endl;
+                // std::cout << "Depth measured: " << _distance_to_obstacle_update_callback()
+                //           << " | threshold: " << _mission_manager_config.simple_collision_avoid_distance_threshold
+                //           << " | altitude to home: " << _telemetry->position_velocity_ned().position.down_m
+                //           << " | is action triggered? " << std::boolalpha << _action_triggered << std::endl;
 
                 if (_distance_to_obstacle_update_callback() <=
                         _mission_manager_config.simple_collision_avoid_distance_threshold &&
