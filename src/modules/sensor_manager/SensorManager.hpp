@@ -49,6 +49,7 @@
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <std_msgs/msg/float32.hpp>
 
 static constexpr auto sensorManagerOut = "[Sensor Manager]";
 
@@ -71,22 +72,23 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     };
 
     void RCPPUTILS_TSA_GUARDED_BY(sensor_manager_mutex_) set_roi(const ROISettings& settings) {
-        std::lock_guard<std::mutex> lock(sensor_manager_mutex_);
-        roi_settings_ = settings;
+        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+        _roi_settings = settings;
     }
 
     float RCPPUTILS_TSA_GUARDED_BY(sensor_manager_mutex_) get_latest_depth() {
-        std::lock_guard<std::mutex> lock(sensor_manager_mutex_);
-        return depth_;
+        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+        return _depth;
     }
 
    private:
     void handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg);
 
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_image_sub_{};
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depth_image_sub{};
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _obstacle_distance_pub{};
 
-    mutable std::mutex sensor_manager_mutex_;
+    mutable std::mutex _sensor_manager_mutex;
 
-    ROISettings roi_settings_{};
-    float depth_{NAN};
+    ROISettings _roi_settings{};
+    float _depth{NAN};
 };

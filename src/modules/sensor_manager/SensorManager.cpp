@@ -53,12 +53,14 @@ void SensorManager::init() {
     qos.keep_last(10);
     qos.best_effort();  // For Gazebo sensors output, the QoS setting need to be set to Best Effort
 
-    depth_image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+    _depth_image_sub = this->create_subscription<sensor_msgs::msg::Image>(
         "/camera/depth/image_raw", qos,
         [this](const sensor_msgs::msg::Image::SharedPtr msg) { handle_incoming_depth_image(msg); });
+
+    _obstacle_distance_pub = this->create_publisher<std_msgs::msg::Float32>("/sensor_manager/distance_to_obstacle", 10);
 }
 
-auto SensorManager::deinit() -> void { depth_image_sub_.reset(); }
+auto SensorManager::deinit() -> void { _depth_image_sub.reset(); }
 
 auto SensorManager::run() -> void { rclcpp::spin(shared_from_this()); }
 
@@ -70,8 +72,8 @@ void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::S
     // make a local copy of the ROI settings
     ROISettings local_settings;
     {
-        std::lock_guard<std::mutex> lock(sensor_manager_mutex_);
-        local_settings = roi_settings_;
+        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+        local_settings = _roi_settings;
     }
 
     const int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
@@ -95,6 +97,12 @@ void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::S
                     .minCoeff();
     }
 
-    std::lock_guard<std::mutex> lock(sensor_manager_mutex_);
-    depth_ = (static_cast<float>(depth) == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
+    // make the obstacle disance available for the Mission Manager to access
+    std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+    _depth = (static_cast<float>(depth) == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
+
+    // Publish obstacle distance back to ROS
+    auto obstacle_dist = std_msgs::msg::Float32();
+    obstacle_dist.data = _depth;
+    _obstacle_distance_pub->publish(obstacle_dist);
 }
