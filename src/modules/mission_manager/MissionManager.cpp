@@ -75,11 +75,7 @@ void MissionManager::deinit() {
 }
 
 void MissionManager::run() {
-    while (!_telemetry->health_all_ok()) {
-        std::cout << missionManagerOut << " Waiting for system to be ready" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
+    // Start the desicion maker thread
     _decision_maker_th = std::thread(&MissionManager::decision_maker_run, this);
 
     // Start custom action handler
