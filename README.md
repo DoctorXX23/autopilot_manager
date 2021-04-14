@@ -39,7 +39,7 @@ sudo apt install -y python3-colcon-common-extensions \
 source /opt/ros/foxy/setup.bash
 
 # Install MAVSDK
-dpkg -i libmavsdk0_0.37.0-1_amd64.deb
+dpkg -i libmavsdk*.deb
 sudo ldconfig
 
 # Install DBUS
@@ -93,9 +93,13 @@ Before installing it, make sure you configure `com.auterion.autopilot_manager.co
 </busconfig>
 ```
 
-## Install system-wide
+## Install
 
-TODO
+```
+echo "source colcon_ws/install/setup.bash" >> ~/.bashrc
+```
+
+And then `source ~/.bashrc` or open a new terminal window.
 
 # Usage
 
@@ -128,4 +132,30 @@ sudo pip3 install ros_cross_compile
 
 ## Use ros_cross_compile
 
-TODO
+*ros_cross_compile* can be used to compile the package for other architectures, like `arm64`. For that, it uses *qemu* to
+start an emulation in a container of the environment we want to use to build the package. It requires also that MAVSDK gets
+built for that same architecture or installed during the *ros_cross_compile* process. For that, the `--custom-setup-script`
+and `--custom-data-dir` options can be used. `scripts/cross_compile_dependencies.sh` gets loaded to the container so to
+install the required dependencies to the build process The following commands can be used to build the package for the `arm64`
+(`aarch64`) arch and ROS 2 Foxy (we will be building MAVSDK and installing it from source):
+
+```sh
+# Clone MAVSDK to be built from source
+git clone --recursive https://github.com/Auterion/MAVSDK.git -b develop /tmp/MAVSDK
+# Add COLCON_IGNORE to the MAVSDK dir so colcon doesn't build it
+touch /tmp/MAVSDK/COLCON_IGNORE
+# Run cross-compilation
+ros_cross_compile colcon_ws/src \
+  --arch aarch64 \
+  --os ubuntu \
+  --rosdistro foxy \
+  --custom-setup-script scripts/cross_compile_dependencies.sh \
+  --custom-data-dir /tmp/MAVSDK
+```
+
+The resulting package installation files can be found in `colcon_ws/install_aarch64` and can be copied to the target device,
+like the Skynode. To use it, just source the `setup.bash` file inside the `install_aarch64` directory:
+
+```
+echo "source <prefix_path>/install_aarch64/setup.bash" >> ~/.bashrc
+```
