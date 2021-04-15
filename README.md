@@ -106,9 +106,9 @@ And then `source ~/.bashrc` or open a new terminal window.
 ```bash
 $ ros2 run autopilot-manager autopilot-manager [OPTIONS...]
   -a --file-custom-action-config	Absolute path to configuration file of the custom actions.
-                                        Default: /usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json
+                                        Default: /shared_container_dir/autopilot-manager/data/custom_action/custom_action.json
   -c --file-autopilot-manager-config	Absolute path to configuration file of the overall autopilot manager service.
-                                        Default: /shared_container_dir/autopilot_manager.conf
+                                        Default: /shared_container_dir/autopilot-manager/data/config/autopilot_manager.conf
   -m --mavlink-port			MAVLink port to connect the Autopilot Manager MAVSDK instance
                                         through UDP. Default: 14570
   -h --help				Print this message

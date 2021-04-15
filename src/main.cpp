@@ -46,9 +46,9 @@ constexpr uint32_t mavlink_router_port = 14590;
 
 auto main(int argc, char* argv[]) -> int {
     uint32_t mavlink_port{mavlink_router_port};
-    std::string path_to_apm_config_file{"/shared_container_dir/autopilot_manager.conf"};
+    std::string path_to_apm_config_file{"/shared_container_dir/autopilot-manager/data/config/autopilot_manager.conf"};
     std::string path_to_custom_action_file{
-        "/usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json"};
+        "/shared_container_dir/autopilot-manager/data/custom_action/custom_action.json"};
 
     parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
 

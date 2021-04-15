@@ -43,10 +43,10 @@ void help_argv_description(const char* pgm) {
     std::cout << pgm
               << " [OPTIONS...]\n\n"
                  "  -a --file-custom-action-config	Absolute path to configuration file of the custom actions.\n"
-                 "\t\t\t\t\tDefault: /usr/src/app/autopilot-manager/data/example/custom_action/custom_action.json\n"
+                 "\t\t\t\t\tDefault: /shared_container_dir/autopilot-manager/data/custom_action/custom_action.json\n"
                  "  -c --file-autopilot-manager-config	Absolute path to configuration file of the overall "
                  "autopilot manager service.\n"
-                 "\t\t\t\t\tDefault: /shared_container_dir/autopilot_manager.conf\n"
+                 "\t\t\t\t\tDefault: /shared_container_dir/autopilot-manager/data/config/autopilot_manager.conf\n"
                  "  -m --mavlink-port			MAVLink port to connect the Autopilot "
                  "Manager MAVSDK instance\n\t\t\t\t\tthrough UDP. Default: 14570\n"
                  "  -h --help				Print this message\n";
