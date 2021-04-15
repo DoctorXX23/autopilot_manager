@@ -62,6 +62,9 @@ void parse_argv(int argc, char* const argv[], uint32_t& mavlink_port, std::strin
     int c = 0;
     bool invalid_argument = false;
 
+    // allow unknown arguments so --ros-args get passed
+    opterr = 0;
+
     while ((c = getopt_long(argc, argv, "a:c:hm:", options, nullptr)) >= 0) {
         switch (c) {
             case 'h':
@@ -82,12 +85,11 @@ void parse_argv(int argc, char* const argv[], uint32_t& mavlink_port, std::strin
                 break;
             case '?':
             default:
-                help_argv_description(argv[0]);
-                exit(-1);
+                break;
         }
     }
     /* positional arguments */
-    if (optind != argc || invalid_argument) {
+    if (invalid_argument) {
         std::cerr << "Invalid argument" << std::endl;
         help_argv_description(argv[0]);
         exit(-1);

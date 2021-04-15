@@ -103,7 +103,7 @@ And then `source ~/.bashrc` or open a new terminal window.
 
 # Usage
 
-```bash
+```sh
 $ ros2 run autopilot-manager autopilot-manager [OPTIONS...]
   -a --file-custom-action-config	Absolute path to configuration file of the custom actions.
                                         Default: /shared_container_dir/autopilot-manager/data/custom_action/custom_action.json
@@ -112,7 +112,16 @@ $ ros2 run autopilot-manager autopilot-manager [OPTIONS...]
   -m --mavlink-port			MAVLink port to connect the Autopilot Manager MAVSDK instance
                                         through UDP. Default: 14570
   -h --help				Print this message
+```
 
+A ROS bool parameter named `sim` can be set when one is using a simulation environment. For that, a ROS param file can be used
+or rather be passed as an argument on `ros2 run`. E.g:
+
+```sh
+ros2 run autopilot-manager autopilot-manager \
+  -a install/autopilot-manager/share/autopilot-manager/data/example/custom_action/custom_action.json \
+  -c install/autopilot-manager/share/autopilot-manager/data/config/autopilot_manager.conf \
+  --ros-args -p sim:=true
 ```
 
 # Packaging
@@ -133,11 +142,11 @@ sudo pip3 install ros_cross_compile
 ## Use ros_cross_compile
 
 *ros_cross_compile* can be used to compile the package for other architectures, like `arm64`. For that, it uses *qemu* to
-start an emulation in a container of the environment we want to use to build the package. It requires also that MAVSDK gets
-built for that same architecture or installed during the *ros_cross_compile* process. For that, the `--custom-setup-script`
-and `--custom-data-dir` options can be used. `scripts/cross_compile_dependencies.sh` gets loaded to the container so to
-install the required dependencies to the build process The following commands can be used to build the package for the `arm64`
-(`aarch64`) arch and ROS 2 Foxy (we will be building MAVSDK and installing it from source):
+start an emulation in a container of the environment we want to use to build the package. It requires also that MAVSDK
+gets built for that same architecture or installed during the *ros_cross_compile* process. The `--custom-setup-script`
+`--custom-data-dir` options can be used. `scripts/cross_compile_dependencies.sh` gets loaded to the container so to
+and install the required dependencies to the build process. The following commands can be used to build the package for
+the `arm64` (`aarch64`) arch and ROS 2 Foxy (we will be building MAVSDK and installing it from source):
 
 ```sh
 # Clone MAVSDK to be built from source
