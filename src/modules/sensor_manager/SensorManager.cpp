@@ -49,13 +49,25 @@ SensorManager::~SensorManager() { deinit(); }
 void SensorManager::init() {
     std::cout << sensorManagerOut << " Started!" << std::endl;
 
+    bool sim;
+    this->declare_parameter("sim");
+    this->get_parameter_or("sim", sim, false);
+
     rclcpp::SensorDataQoS qos;
-    qos.keep_last(10);
-    qos.best_effort();  // For Gazebo sensors output, the QoS setting need to be set to Best Effort
+    // For Gazebo sensors output, the QoS setting need to be set to Best Effort
+    if (sim) {
+        qos.keep_last(10);
+        qos.best_effort();
+    }
+
+    // Camera topic name changes for sim
+    std::string depth_topic{"/camera/depth/image_rect_raw"};
+    if (sim) {
+        depth_topic = "/camera/depth/image_raw";
+    }
 
     _depth_image_sub = this->create_subscription<sensor_msgs::msg::Image>(
-        "/camera/depth/image_raw", qos,
-        [this](const sensor_msgs::msg::Image::SharedPtr msg) { handle_incoming_depth_image(msg); });
+        depth_topic, qos, [this](const sensor_msgs::msg::Image::SharedPtr msg) { handle_incoming_depth_image(msg); });
 
     _obstacle_distance_pub = this->create_publisher<std_msgs::msg::Float32>("/sensor_manager/distance_to_obstacle", 10);
 }
