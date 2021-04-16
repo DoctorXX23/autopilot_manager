@@ -82,7 +82,7 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     }
 
    private:
-    void handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg);
+    void handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg, const bool is_int);
 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depth_image_sub{};
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _obstacle_distance_pub{};
