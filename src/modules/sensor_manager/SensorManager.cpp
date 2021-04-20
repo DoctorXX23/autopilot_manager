@@ -39,6 +39,7 @@
  */
 
 #include <SensorManager.hpp>
+#include <sensor_msgs/image_encodings.hpp>
 
 SensorManager::SensorManager() : Node("sensor_manager") {}
 
@@ -55,13 +56,8 @@ void SensorManager::init() {
     bool is_int = true;
 
     rclcpp::SensorDataQoS qos;
-    // For Gazebo sensors output, the QoS setting need to be set to Best Effort
-    // Also, depth camera data is defined with floats
-    if (sim) {
-        qos.keep_last(10);
-        qos.best_effort();
-        is_int = false;
-    }
+    qos.keep_last(10);
+    qos.best_effort();
 
     // Camera topic name changes for sim
     std::string depth_topic{"/camera/depth/image_rect_raw"};
@@ -71,7 +67,7 @@ void SensorManager::init() {
 
     _depth_image_sub = this->create_subscription<sensor_msgs::msg::Image>(
         depth_topic, qos,
-        [this, is_int](const sensor_msgs::msg::Image::SharedPtr msg) { handle_incoming_depth_image(msg, is_int); });
+        [this, is_int](const sensor_msgs::msg::Image::SharedPtr msg) { handle_incoming_depth_image(msg); });
 
     _obstacle_distance_pub = this->create_publisher<std_msgs::msg::Float32>("/sensor_manager/distance_to_obstacle", 10);
 }
@@ -80,82 +76,67 @@ auto SensorManager::deinit() -> void { _depth_image_sub.reset(); }
 
 auto SensorManager::run() -> void { rclcpp::spin(shared_from_this()); }
 
-void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg, const bool is_int) {
-    // separate data types according to the source of the data
-    if (is_int) {
-        using PIXEL = uint16_t;
-        // make an Eigen wrapper around the memory
-        auto img = Eigen::Map<const Eigen::Matrix<PIXEL, -1, -1>>(reinterpret_cast<const PIXEL*>(&msg->data[0]),
-                                                                  msg->height, msg->width);
-        // make a local copy of the ROI settings
-        ROISettings local_settings;
-        {
-            std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-            local_settings = _roi_settings;
+void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg) {
+    // Allocate new Image message
+    auto depth_msg = std::make_shared<sensor_msgs::msg::Image>();
+    depth_msg->header = msg->header;
+    depth_msg->height = msg->height;
+    depth_msg->width = msg->width;
+
+    // If the pixels are encoded in uint16_t, we encode it in floats and convert
+    // from millimeters to meters
+    if (msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1) {
+        // Set data, encoding and step after converting the metric.
+        depth_msg->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+        depth_msg->step = msg->width * (sensor_msgs::image_encodings::bitDepth(depth_msg->encoding) / 8);
+        depth_msg->data.resize(depth_msg->height * depth_msg->step);
+        // Fill in the depth image data, converting mm to m
+        const float bad_point = std::numeric_limits<float>::quiet_NaN();
+        const uint16_t* raw_data = reinterpret_cast<const uint16_t*>(&msg->data[0]);
+        float* depth_data = reinterpret_cast<float*>(&depth_msg->data[0]);
+        for (unsigned index = 0; index < depth_msg->height * depth_msg->width; ++index) {
+            uint16_t raw = raw_data[index];
+            depth_data[index] = (raw == 0) ? bad_point : static_cast<float>(raw) * 0.001f;
         }
-
-        const int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
-        const int64_t rows_pixels = static_cast<int64_t>(local_settings.height_fraction * img.rows());
-        const int64_t cols_offset =
-            static_cast<int64_t>((local_settings.width_center - 0.5f * local_settings.width_fraction) * img.cols());
-        const int64_t rows_offset =
-            static_cast<int64_t>((local_settings.height_center - 0.5f * local_settings.height_fraction) * img.rows());
-
-        PIXEL depth = std::numeric_limits<PIXEL>::max();
-
-        // check that settings are OK
-        if (cols_pixels > 0 && cols_pixels < img.cols() && rows_pixels > 0 && rows_pixels < img.rows() &&
-            cols_offset >= 0 && cols_offset + cols_pixels < img.cols() && rows_offset >= 0 &&
-            rows_offset + rows_pixels < img.rows()) {
-            depth = img.block(rows_offset, cols_offset, rows_pixels, cols_pixels)
-                        .array()
-                        .isNaN()
-                        .select(std::numeric_limits<PIXEL>::max(),
-                                img.block(rows_offset, cols_offset, rows_pixels, cols_pixels))
-                        .minCoeff();
-        }
-
-        // make the obstacle disance available for the Mission Manager to access
-        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-        _depth = (static_cast<float>(depth) == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
     } else {
-        using PIXEL = float;
-
-        // make an Eigen wrapper around the memory
-        auto img = Eigen::Map<const Eigen::Matrix<PIXEL, -1, -1>>(reinterpret_cast<const PIXEL*>(&msg->data[0]),
-                                                                  msg->height, msg->width);
-        // make a local copy of the ROI settings
-        ROISettings local_settings;
-        {
-            std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-            local_settings = _roi_settings;
-        }
-
-        const int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
-        const int64_t rows_pixels = static_cast<int64_t>(local_settings.height_fraction * img.rows());
-        const int64_t cols_offset =
-            static_cast<int64_t>((local_settings.width_center - 0.5f * local_settings.width_fraction) * img.cols());
-        const int64_t rows_offset =
-            static_cast<int64_t>((local_settings.height_center - 0.5f * local_settings.height_fraction) * img.rows());
-
-        PIXEL depth = std::numeric_limits<PIXEL>::max();
-
-        // check that settings are OK
-        if (cols_pixels > 0 && cols_pixels < img.cols() && rows_pixels > 0 && rows_pixels < img.rows() &&
-            cols_offset >= 0 && cols_offset + cols_pixels < img.cols() && rows_offset >= 0 &&
-            rows_offset + rows_pixels < img.rows()) {
-            depth = img.block(rows_offset, cols_offset, rows_pixels, cols_pixels)
-                        .array()
-                        .isNaN()
-                        .select(std::numeric_limits<PIXEL>::max(),
-                                img.block(rows_offset, cols_offset, rows_pixels, cols_pixels))
-                        .minCoeff();
-        }
-
-        // make the obstacle disance available for the Mission Manager to access
-        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
-        _depth = (static_cast<float>(depth) == std::numeric_limits<PIXEL>::max()) ? NAN : depth;
+        depth_msg->data = msg->data;
     }
+
+    // Make an Eigen wrapper around the memory
+    const auto img = Eigen::Map<const Eigen::Matrix<float, -1, -1>>(reinterpret_cast<float*>(&depth_msg->data[0]),
+                                                                    msg->height, msg->width);
+
+    // Make a local copy of the ROI settings
+    ROISettings local_settings;
+    {
+        std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+        local_settings = _roi_settings;
+    }
+
+    const int64_t cols_pixels = static_cast<int64_t>(local_settings.width_fraction * img.cols());
+    const int64_t rows_pixels = static_cast<int64_t>(local_settings.height_fraction * img.rows());
+    const int64_t cols_offset =
+        static_cast<int64_t>((local_settings.width_center - 0.5f * local_settings.width_fraction) * img.cols());
+    const int64_t rows_offset =
+        static_cast<int64_t>((local_settings.height_center - 0.5f * local_settings.height_fraction) * img.rows());
+
+    float depth = std::numeric_limits<float>::infinity();
+
+    // Check that settings are OK
+    if (cols_pixels > 0 && cols_pixels < img.cols() && rows_pixels > 0 && rows_pixels < img.rows() &&
+        cols_offset >= 0 && cols_offset + cols_pixels < img.cols() && rows_offset >= 0 &&
+        rows_offset + rows_pixels < img.rows()) {
+        depth = img.block(rows_offset, cols_offset, rows_pixels, cols_pixels)
+                    .array()
+                    .isNaN()
+                    .select(std::numeric_limits<float>::infinity(),
+                            img.block(rows_offset, cols_offset, rows_pixels, cols_pixels))
+                    .minCoeff();
+    }
+
+    // Make the obstacle disance available for the Mission Manager to access
+    std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
+    _depth = depth;
 
     // Publish obstacle distance back to ROS
     auto obstacle_dist = std_msgs::msg::Float32();

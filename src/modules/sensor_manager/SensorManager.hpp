@@ -65,24 +65,24 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     auto run() -> void override;
 
     struct ROISettings {
-        float width_fraction{0.2f};
-        float height_fraction{0.2f};
+        float width_fraction{0.3f};
+        float height_fraction{0.3f};
         float width_center{0.5f};
         float height_center{0.5f};
     };
 
-    void RCPPUTILS_TSA_GUARDED_BY(sensor_manager_mutex_) set_roi(const ROISettings& settings) {
+    void RCPPUTILS_TSA_GUARDED_BY(_sensor_manager_mutex) set_roi(const ROISettings& settings) {
         std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
         _roi_settings = settings;
     }
 
-    float RCPPUTILS_TSA_GUARDED_BY(sensor_manager_mutex_) get_latest_depth() {
+    float RCPPUTILS_TSA_GUARDED_BY(_sensor_manager_mutex) get_latest_depth() {
         std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
         return _depth;
     }
 
    private:
-    void handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg, const bool is_int);
+    void handle_incoming_depth_image(const sensor_msgs::msg::Image::SharedPtr msg);
 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depth_image_sub{};
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _obstacle_distance_pub{};
