@@ -100,7 +100,7 @@ void MissionManager::decision_maker_run() {
                 //           << " | altitude to home: " << _telemetry->position_velocity_ned().position.down_m
                 //           << " | is action triggered? " << std::boolalpha << _action_triggered << std::endl;
 
-                if (_distance_to_obstacle_update_callback() <=
+                if (std::isfinite(_distance_to_obstacle_update_callback()) && _distance_to_obstacle_update_callback() <=
                         _mission_manager_config.simple_collision_avoid_distance_threshold &&
                     _telemetry->in_air() &&
                     _telemetry->position_velocity_ned().position.down_m <= -1.0  // for now this condition is required
@@ -145,8 +145,8 @@ void MissionManager::decision_maker_run() {
             _action_triggered = false;
         }
 
-        // Decision maker runs at 10hz
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Decision maker runs at 20hz
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
