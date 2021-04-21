@@ -65,8 +65,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     auto run() -> void override;
 
     struct ROISettings {
-        float width_fraction{0.3f};
-        float height_fraction{0.3f};
+        float width_fraction{0.2f};
+        float height_fraction{0.2f};
         float width_center{0.5f};
         float height_center{0.5f};
     };
