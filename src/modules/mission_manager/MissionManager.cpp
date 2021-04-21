@@ -37,8 +37,7 @@
  * @author Nuno Marques <nuno@auterion.com>
  */
 
-#include "MissionManager.hpp"
-
+#include <MissionManager.hpp>
 #include <atomic>
 #include <future>
 #include <iostream>
@@ -54,7 +53,9 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
     : _config_update_callback([]() { return MissionManagerConfiguration{}; }),
       _path_to_custom_action_file{std::move(path_to_custom_action_file)},
       _mission_manager_config{},
-      _mavsdk_system{std::move(mavsdk_system)} {}
+      _mavsdk_system{std::move(mavsdk_system)},
+      _action_triggered{false},
+      _in_air{false} {}
 
 MissionManager::~MissionManager() { deinit(); }
 
@@ -85,7 +86,23 @@ void MissionManager::run() {
 }
 
 void MissionManager::decision_maker_run() {
+    // Init action trigger timer
     _last_time = std::chrono::system_clock::now();
+
+    // Get the landing state so we know when the vehicle is in-air
+    _telemetry->subscribe_landed_state([this](mavsdk::Telemetry::LandedState landed_state) {
+        switch (landed_state) {
+            case mavsdk::Telemetry::LandedState::InAir:
+                _in_air = true;
+                break;
+            case mavsdk::Telemetry::LandedState::Unknown:
+            case mavsdk::Telemetry::LandedState::OnGround:
+            case mavsdk::Telemetry::LandedState::TakingOff:
+            case mavsdk::Telemetry::LandedState::Landing:
+            default:
+                _in_air = false;
+        }
+    });
 
     while (!int_signal) {
         // Update configuration at each iteration
@@ -97,15 +114,13 @@ void MissionManager::decision_maker_run() {
             if (_mission_manager_config.simple_collision_avoid_enabled != 0U) {
                 // std::cout << "Depth measured: " << _distance_to_obstacle_update_callback()
                 //           << " | threshold: " << _mission_manager_config.simple_collision_avoid_distance_threshold
-                //           << " | altitude to home: " << _telemetry->position_velocity_ned().position.down_m
-                //           << " | is action triggered? " << std::boolalpha << _action_triggered << std::endl;
+                //           << " | in air: " << _in_air << " | is action triggered? " << std::boolalpha
+                //           << _action_triggered << std::endl;
 
                 if (std::isfinite(_distance_to_obstacle_update_callback()) &&
                     _distance_to_obstacle_update_callback() <=
                         _mission_manager_config.simple_collision_avoid_distance_threshold &&
-                    _telemetry->in_air() &&
-                    _telemetry->position_velocity_ned().position.down_m <= -1.0  // for now this condition is required
-                    && !_action_triggered) {
+                    _in_air && !_action_triggered) {  // only trigger the condition when the vehicle is in-air
                     if (_mission_manager_config.simple_collision_avoid_distance_on_condition_true == "KEEP_STATE") {
                     } else if (_mission_manager_config.simple_collision_avoid_distance_on_condition_true == "HOLD") {
                         std::cout << "Currently not supported in MAVSDK" << std::endl;

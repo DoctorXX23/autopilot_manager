@@ -131,7 +131,8 @@ class MissionManager : public ModuleBase {
     std::shared_ptr<mavsdk::Action> _action;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
 
-    bool _action_triggered = false;
+    bool _action_triggered;
+    bool _in_air;
 
     std::chrono::time_point<std::chrono::system_clock> _last_time{};
 
