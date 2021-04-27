@@ -150,7 +150,7 @@ the `arm64` (`aarch64`) arch and ROS 2 Foxy (we will be building MAVSDK and inst
 
 ```sh
 # Clone MAVSDK to be built from source
-git clone --recursive https://github.com/Auterion/MAVSDK.git -b develop /tmp/MAVSDK
+git clone --recursive https://github.com/Auterion/MAVSDK.git -b main /tmp/MAVSDK
 # Add COLCON_IGNORE to the MAVSDK dir so colcon doesn't build it
 touch /tmp/MAVSDK/COLCON_IGNORE
 # Run cross-compilation
