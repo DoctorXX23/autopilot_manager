@@ -143,31 +143,29 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
     const uint8_t safe_landing_state = _landing_condition_state_update_callback();
 
-    // std::cout << missionManagerOut << "safe_landing_enabled: " << safe_landing_enabled << " | _landing: " << _landing
-    // << " | _on_ground: " << _on_ground << " | safe_landing_state: " << unsigned(safe_landing_state) << std::endl;
-
     if (safe_landing_enabled) {
         if (_landing && !_on_ground) {
+            std::string status{};
             if (safe_landing_state == 0 /*eLandingMapperState::UNKNOWN*/ && !_action_triggered) {
                 // Hold position in case of unknown landing state
                 _action->hold();
 
             } else if (safe_landing_state == 3 /*eLandingMapperState::CAN_NOT_LAND*/ && !_action_triggered) {
-                std::cout << missionManagerOut << " Not able to land" << std::endl;
-
                 if (safe_landing_on_no_safe_land == "HOLD") {
                     _action->hold();
-                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info,
-                                                      "Position hold triggered for Safe Landing");
-                    std::cout << missionManagerOut << " Position hold triggered for Safe Landing" << std::endl;
+
+                    status = std::string(missionManagerOut) + " Position hold triggered for Safe Landing";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "RTL") {
                     _action->return_to_launch();
-                    std::cout << missionManagerOut << " RTL triggered" << std::endl;
+
+                    status = std::string(missionManagerOut) + " RTL triggered for Safe Landing";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "MOVE_XYZ_WRT_CURRENT") {
-                    std::string status{};
-
                     const auto waypoint =
                         get_global_position_from_local_offset(local_position_offset_x, local_position_offset_y);
                     const double waypoint_altitude = _current_altitude_amsl + local_position_offset_z;
@@ -176,27 +174,33 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                     set_new_waypoint(waypoint.latitude_deg, waypoint.longitude_deg, waypoint_altitude);
 
-                    status = "Moving XYZ WRT to current vehicle position triggered. Heading to determined Latitude " +
-                             std::to_string(waypoint.latitude_deg) + " deg, Longitude " +
-                             std::to_string(waypoint.longitude_deg) + " deg, Altitude (AMSL) " +
-                             std::to_string(waypoint_altitude) + " meters";
+                    status =
+                        std::string(missionManagerOut) +
+                        "Moving XYZ WRT to current vehicle position triggered for Safe Landing. Heading to determined "
+                        "Latitude " +
+                        std::to_string(waypoint.latitude_deg) + " deg, Longitude " +
+                        std::to_string(waypoint.longitude_deg) + " deg, Altitude (AMSL) " +
+                        std::to_string(waypoint_altitude) + " meters";
 
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
-                    std::cout << missionManagerOut << " " << status << std::endl;
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "GO_TO_WAYPOINT_XYZ") {
                     _action->hold();
-                    std::cout
-                        << missionManagerOut
-                        << " GO_TO_WAYPOINT_XYZ action currently not supported for Safe Landing. Holding position..."
-                        << std::endl;
+
+                    status = std::string(missionManagerOut) +
+                             " GO_TO_WAYPOINT_XYZ action currently not supported for Safe Landing. Holding position...";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "MOVE_LLA_WRT_CURRENT") {
                     _action->hold();
-                    std::cout
-                        << missionManagerOut
-                        << " MOVE_LLA_WRT_CURRENT action currently not supported for Safe Landing. Holding position..."
-                        << std::endl;
+
+                    status =
+                        std::string(missionManagerOut) +
+                        " MOVE_LLA_WRT_CURRENT action currently not supported for Safe Landing. Holding position...";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "GO_TO_WAYPOINT") {
                     std::string status{};
@@ -210,10 +214,11 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         (std::abs(_previously_set_waypoint_altitude_amsl - _current_altitude_amsl) <= 1.0)) {
                         _action->return_to_launch();
 
-                        status =
-                            "Go-To Global Position Waypoint not triggered, as the waypoint set is the same as the "
-                            "global position of the vehicle."
-                            "RTL triggered instead...";
+                        status = std::string(missionManagerOut) +
+                                 " Go-To Global Position Waypoint not triggered for Safe Landing, as the waypoint set "
+                                 "is the same as the "
+                                 "global position of the vehicle."
+                                 "RTL triggered instead...";
 
                         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
 
@@ -225,7 +230,8 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         set_new_waypoint(global_position_waypoint_lat, global_position_waypoint_lon,
                                          global_position_waypoint_alt_amsl);
 
-                        status = "Go-To Global Position Waypoint triggered. Heading to Latitude " +
+                        status = std::string(missionManagerOut) +
+                                 " Go-To Global Position Waypoint triggered for Safe Landing. Heading to Latitude " +
                                  std::to_string(global_position_waypoint_lat) + " deg, Longitude " +
                                  std::to_string(global_position_waypoint_lon) + " deg, Altitude (AMSL) " +
                                  std::to_string(global_position_waypoint_alt_amsl) + " meters";
@@ -233,21 +239,23 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                     }
 
-                    std::cout << missionManagerOut << " " << status << std::endl;
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "SCRIPT_CALL") {
                     _action->hold();
 
-                    std::cout << missionManagerOut
-                              << " SCRIPT_CALL action currently not supported for Safe Landing. Holding position..."
-                              << std::endl;
+                    status = std::string(missionManagerOut) +
+                             " SCRIPT_CALL action currently not supported for Safe Landing. Holding position...";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                    std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "API_CALL") {
                     _action->hold();
 
-                    std::cout << missionManagerOut
-                              << " API_CALL action currently not supported for Safe Landing. Holding position..."
-                              << std::endl;
+                    status = std::string(missionManagerOut) +
+                             " API_CALL action currently not supported for Safe Landing. Holding position...";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                    std::cout << status << std::endl;
                 }
 
                 _action_triggered = true;
@@ -256,11 +264,11 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
         }
 
         // Check if new waypoint was set as part of the action
-        if (std::isfinite(_new_latitude) && std::isfinite(_new_longitude), std::isfinite(_new_altitude_amsl)) {
+        if (std::isfinite(_new_latitude) && std::isfinite(_new_longitude) && std::isfinite(_new_altitude_amsl)) {
             // check if we arrived to the newly set waypoint
             if (arrived_to_new_waypoint()) {
                 // if the user set it wants to try landing again after arriving to the waypoint
-                // then land and
+                // then land and unset the new waypoint
                 if (safe_landing_try_landing_after_action) {
                     _action->land();
                     set_new_waypoint(NAN, NAN, NAN);
@@ -283,40 +291,55 @@ void MissionManager::handle_simple_collision_avoidance(std::chrono::time_point<s
             _in_air && !_action_triggered) {  // only trigger the condition when the vehicle is in-air
             if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "HOLD") {
                 _action->hold();
-                std::cout << missionManagerOut << "Position hold triggered" << std::endl;
+                std::cout << std::string(missionManagerOut) << "Position hold triggered for Simple Obstacle Avoidance"
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "RTL") {
                 _action->return_to_launch();
-                std::cout << missionManagerOut << "RTL triggered" << std::endl;
+                std::cout << std::string(missionManagerOut) << "RTL triggered for Simple Obstacle Avoidance"
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true ==
                        "MOVE_XYZ_WRT_CURRENT") {
                 _action->hold();
-                std::cout << missionManagerOut
-                          << "MOVE_XYZ_WRT_CURRENT action currently not supported. Holding position..." << std::endl;
+                std::cout << std::string(missionManagerOut)
+                          << "MOVE_XYZ_WRT_CURRENT action currently not supported for Simple Obstacle Avoidance. "
+                             "Holding position..."
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true ==
                        "GO_TO_WAYPOINT_XYZ") {
                 _action->hold();
-                std::cout << missionManagerOut
-                          << "GO_TO_WAYPOINT_XYZ action currently not supported. Holding position..." << std::endl;
+                std::cout << std::string(missionManagerOut)
+                          << "GO_TO_WAYPOINT_XYZ action currently not supported for Simple Obstacle Avoidance. Holding "
+                             "position..."
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true ==
                        "MOVE_LLA_WRT_CURRENT") {
                 _action->hold();
-                std::cout << missionManagerOut
-                          << "MOVE_LLA_WRT_CURRENT action currently not supported. Holding position..." << std::endl;
+                std::cout << std::string(missionManagerOut)
+                          << "MOVE_LLA_WRT_CURRENT action currently not supported for Simple Obstacle Avoidance. "
+                             "Holding position..."
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "GO_TO_WAYPOINT") {
                 _action->hold();
-                std::cout << missionManagerOut << "GO_TO_WAYPOINT action currently not supported. Holding position..."
+                std::cout << std::string(missionManagerOut)
+                          << "GO_TO_WAYPOINT action currently not supported for Simple Obstacle Avoidance. Holding "
+                             "position..."
                           << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "LAND") {
                 _action->land();
-                std::cout << missionManagerOut << "Land triggered" << std::endl;
+                std::cout << std::string(missionManagerOut) << "Land triggered for Simple Obstacle Avoidance"
+                          << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "SCRIPT_CALL") {
                 _action->hold();
-                std::cout << missionManagerOut << "SCRIPT_CALL action currently not supported. Holding position..."
-                          << std::endl;
+                std::cout
+                    << std::string(missionManagerOut)
+                    << "SCRIPT_CALL action currently not supported for Simple Obstacle Avoidance. Holding position..."
+                    << std::endl;
             } else if (_mission_manager_config.simple_collision_avoid_action_on_condition_true == "API_CALL") {
                 _action->hold();
-                std::cout << missionManagerOut << "API_CALL action currently not supported. Holding position..."
-                          << std::endl;
+                std::cout
+                    << std::string(missionManagerOut)
+                    << "API_CALL action currently not supported for Simple Obstacle Avoidance. Holding position..."
+                    << std::endl;
             }
 
             _action_triggered = true;
@@ -351,9 +374,15 @@ void MissionManager::decision_maker_run() {
                 _ref_longitude = gps_global_origin.longitude_deg;
                 _ref_altitude = gps_global_origin.altitude_m;
 
-                std::cout << missionManagerOut << " Global position reference initialiazed: Latitude: " << _ref_latitude
+                std::cout << std::string(missionManagerOut)
+                          << " Global position reference initialiazed: Latitude: " << _ref_latitude
                           << " deg | Longitude: " << _ref_longitude << " deg | Altitude (AMSL): " << _ref_altitude
                           << " meters" << std::endl;
+
+                const std:::string status = std::string(missionManagerOut) +
+                         " API_CALL action currently not supported for Safe Landing. Holding position...";
+                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                std::cout << status << std::endl;
             }
         });
 
