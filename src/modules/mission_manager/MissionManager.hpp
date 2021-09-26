@@ -56,7 +56,7 @@
 #include <mavsdk/plugins/server_utility/server_utility.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
-static constexpr auto missionManagerOut = "[Mission Manager]";
+static constexpr auto missionManagerOut = "[Mission Manager] ";
 
 class MissionManager : public ModuleBase {
    public:

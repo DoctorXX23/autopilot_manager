@@ -69,7 +69,7 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
 MissionManager::~MissionManager() { deinit(); }
 
 void MissionManager::init() {
-    std::cout << missionManagerOut << " Started!" << std::endl;
+    std::cout << missionManagerOut << "Started!" << std::endl;
 
     // Actions are processed and executed in the Mission Manager decion maker
     _action = std::make_shared<mavsdk::Action>(_mavsdk_system);
@@ -154,14 +154,14 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 if (safe_landing_on_no_safe_land == "HOLD") {
                     _action->hold();
 
-                    status = std::string(missionManagerOut) + " Position hold triggered for Safe Landing";
+                    status = std::string(missionManagerOut) + "Position hold triggered for Safe Landing";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                     std::cout << status << std::endl;
 
                 } else if (safe_landing_on_no_safe_land == "RTL") {
                     _action->return_to_launch();
 
-                    status = std::string(missionManagerOut) + " RTL triggered for Safe Landing";
+                    status = std::string(missionManagerOut) + "RTL triggered for Safe Landing";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                     std::cout << status << std::endl;
 
@@ -181,7 +181,6 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         std::to_string(waypoint.latitude_deg) + " deg, Longitude " +
                         std::to_string(waypoint.longitude_deg) + " deg, Altitude (AMSL) " +
                         std::to_string(waypoint_altitude) + " meters";
-
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                     std::cout << status << std::endl;
 
@@ -189,7 +188,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                     _action->hold();
 
                     status = std::string(missionManagerOut) +
-                             " GO_TO_WAYPOINT_XYZ action currently not supported for Safe Landing. Holding position...";
+                             "GO_TO_WAYPOINT_XYZ action currently not supported for Safe Landing. Holding position...";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                     std::cout << status << std::endl;
 
@@ -198,7 +197,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                     status =
                         std::string(missionManagerOut) +
-                        " MOVE_LLA_WRT_CURRENT action currently not supported for Safe Landing. Holding position...";
+                        "MOVE_LLA_WRT_CURRENT action currently not supported for Safe Landing. Holding position...";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                     std::cout << status << std::endl;
 
@@ -215,11 +214,10 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         _action->return_to_launch();
 
                         status = std::string(missionManagerOut) +
-                                 " Go-To Global Position Waypoint not triggered for Safe Landing, as the waypoint set "
+                                 "Go-To Global Position Waypoint not triggered for Safe Landing, as the waypoint set "
                                  "is the same as the "
                                  "global position of the vehicle."
                                  "RTL triggered instead...";
-
                         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
 
                     } else {
@@ -231,11 +229,10 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                          global_position_waypoint_alt_amsl);
 
                         status = std::string(missionManagerOut) +
-                                 " Go-To Global Position Waypoint triggered for Safe Landing. Heading to Latitude " +
+                                 "Go-To Global Position Waypoint triggered for Safe Landing. Heading to Latitude " +
                                  std::to_string(global_position_waypoint_lat) + " deg, Longitude " +
                                  std::to_string(global_position_waypoint_lon) + " deg, Altitude (AMSL) " +
                                  std::to_string(global_position_waypoint_alt_amsl) + " meters";
-
                         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                     }
 
@@ -245,7 +242,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                     _action->hold();
 
                     status = std::string(missionManagerOut) +
-                             " SCRIPT_CALL action currently not supported for Safe Landing. Holding position...";
+                             "SCRIPT_CALL action currently not supported for Safe Landing. Holding position...";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                     std::cout << status << std::endl;
 
@@ -253,7 +250,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                     _action->hold();
 
                     status = std::string(missionManagerOut) +
-                             " API_CALL action currently not supported for Safe Landing. Holding position...";
+                             "API_CALL action currently not supported for Safe Landing. Holding position...";
                     _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                     std::cout << status << std::endl;
                 }
@@ -374,14 +371,12 @@ void MissionManager::decision_maker_run() {
                 _ref_longitude = gps_global_origin.longitude_deg;
                 _ref_altitude = gps_global_origin.altitude_m;
 
-                std::cout << std::string(missionManagerOut)
-                          << " Global position reference initialiazed: Latitude: " << _ref_latitude
-                          << " deg | Longitude: " << _ref_longitude << " deg | Altitude (AMSL): " << _ref_altitude
-                          << " meters" << std::endl;
-
-                const std:::string status = std::string(missionManagerOut) +
-                         " API_CALL action currently not supported for Safe Landing. Holding position...";
-                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                const std::string status =
+                    std::string(missionManagerOut) +
+                    "Global position reference initialiazed: Latitude: " + std::to_string(_ref_latitude) +
+                    " deg | Longitude: " + std::to_string(_ref_longitude) +
+                    " deg | Altitude (AMSL): " + std::to_string(_ref_altitude) + " meters";
+                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                 std::cout << status << std::endl;
             }
         });
