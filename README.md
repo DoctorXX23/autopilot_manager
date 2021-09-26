@@ -6,7 +6,7 @@
 
 An AuterionOS service for higher level interactivity with onboard and flight controller components, using MAVSDK and ROS 2.
 
-# Dependencies
+## Dependencies
 
 _Note: The host system is considered to run Ubuntu 20.04 Focal. Other OS's might be supported, but the provided instructions only cover this OS._
 
@@ -17,13 +17,13 @@ _Note: The host system is considered to run Ubuntu 20.04 Focal. Other OS's might
 5.  DBUS and Glib
 6.  `pymavlink` (optional, to run the available examples)
 
-## ROS packages and workspace library dependencies
+### ROS packages and workspace library dependencies
 
 1.  Auterion's `landing_mapper` and `image_downsampler` library packages
 2.  microRTPS bridge, composed by the `px4_msgs` and `px4_ros_com` packages
 3.  Eigen v3.3.9
 
-## ROS 2 Foxy
+### ROS 2 Foxy
 
 ```bash
 # Set locale
@@ -50,18 +50,18 @@ sudo apt install -y python3-colcon-common-extensions \
         ros-foxy-image-pipeline
 ```
 
-## MAVSDK
+### MAVSDK
 
 **Note: please request to Auterion the deb files of MAVSDK with the supported features, or request the access to the Auterion/MAVSDK repository**
 
-### Installation from deb (recommended)
+#### Installation from deb (recommended)
 
 ```bash
 dpkg -i libmavsdk*.deb
 sudo ldconfig
 ```
 
-### Installation from source
+#### Installation from source
 
 ```bash
 git clone --recursive https://github.com/Auterion/MAVSDK.git -b main
@@ -73,12 +73,12 @@ sudo cmake --build build/default --target install
 sudo ldconfig
 ```
 
-## mavlink-router
+### *mavlink-router*
 
 Please request to Auterion a deb file to install it directly, or follow the instructions in
 <https://github.com/mavlink-router/mavlink-router> to build it and install it from source.
 
-## configuration-manager
+### *configuration-manager*
 
 Please request to Auterion a deb file to install it directly, or follow the instructions in
 bellow to build it and install it from source.
@@ -114,21 +114,21 @@ and edit it in order to add your system user:
 </busconfig>
 ```
 
-## DBUS and Glib
+### DBUS and Glib
 
 ```bash
 sudo apt install -y libdbus-glib-1-dev
 ```
 
-# pymavlink and its dependencies
+### *pymavlink* and its dependencies
 
 ```bash
 pip3 install --user --upgrade pymavlink
 ```
 
-# Setup
+## Setup
 
-## Build
+### Build
 
 ```bash
 source /opt/ros/foxy/setup.bash
@@ -146,9 +146,9 @@ git clone git@github.com:Auterion/px4_msgs.git -b develop src/px4_msgs
 colcon build --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-## mavlink-router config
+### *mavlink-router* config
 
-_Warning: if you one installs mavlink-router system-wide, it needs to take into account that it is going to route MAVLink data on the system._
+**Warning: if you one installs mavlink-router system-wide, it needs to take into account that it is going to route MAVLink data on the system.**
 This might influence the behavior of some of some MAVLink-related applications that the user might have
 installed on its system. Use it cautiously, making sure that 1. one enables or disables the systemd service,
 i.e., for testing/using this application locally, enable the service with `systemctl enable mavlink-router`,
@@ -204,7 +204,7 @@ After saving the file, restart the `mavlink-router` service with:
 systemctl restart mavlink-router
 ```
 
-## DBUS config
+### DBUS config
 
 Copy the `com.auterion.autopilot_manager.conf` on the root of the repo to `/usr/share/dbus-1/system.d/`:
 
@@ -249,7 +249,7 @@ the file you just copied. Example bellow:
 </busconfig>
 ```
 
-## Install the autopilot-manager
+### Install the *autopilot-manager*
 
 ```bash
 echo "source colcon_ws/install/setup.bash" >> ~/.bashrc
@@ -257,7 +257,7 @@ echo "source colcon_ws/install/setup.bash" >> ~/.bashrc
 
 And then `source ~/.bashrc` or open a new terminal window.
 
-# Usage
+## Usage
 
 ```sh
 $ ros2 run autopilot-manager autopilot-manager [OPTIONS...]
@@ -287,7 +287,7 @@ cd configuration-manager/build/src
 ./configuration-manager
 ```
 
-## Simulation
+### Simulation
 
 A ROS bool parameter named `sim` can be set when one is using a simulation environment. For that, a ROS param file can be used
 or rather be passed as an argument on `ros2 run`.
@@ -312,12 +312,12 @@ ros2 run autopilot-manager autopilot-manager \
   --ros-args -p sim:=true
 ```
 
-# Packaging
+## Packaging
 
 Keep in mind that when cross-compiling, the correct toolchain should be installed. Also, MAVSDK should be also installed
 for that same target.
 
-## Dependencies
+### Dependencies
 
 ```bash
 sudo apt install -y  \
@@ -326,7 +326,7 @@ sudo apt install -y  \
 sudo pip3 install ros_cross_compile
 ```
 
-## Use ros_cross_compile
+### Use ros_cross_compile
 
 _ros_cross_compile_ can be used to compile the package for other architectures, like `arm64`. For that, it uses _qemu_ to
 start an emulation in a container of the environment we want to use to build the package. It requires also that MAVSDK
@@ -356,9 +356,9 @@ like the Skynode. To use it, just source the `setup.bash` file inside the `insta
 echo "source <prefix_path>/install_aarch64/setup.bash" >> ~/.bashrc
 ```
 
-# Contributing
+## Contributing
 
-## Code format
+### Code format
 
 One requires clang-format-10 to format the code. Use the following command to format it:
 
