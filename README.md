@@ -345,8 +345,10 @@ ros_cross_compile colcon_ws/src \
   --arch aarch64 \
   --os ubuntu \
   --rosdistro foxy \
-  --custom-setup-script scripts/cross_compile_dependencies.sh \
-  --custom-data-dir /tmp/MAVSDK
+  --custom-setup-script colcon_ws/src/autopilot_manager/scripts/cross_compile_dependencies.sh \
+  --custom-data-dir /tmp/MAVSDK \
+  --skip-rosdep-keys Eigen3 image_downsampler landing_mapper px4_msgs px4_ros_com \
+  --colcon-defaults ~/colcon_ws/src/autopilot_manager/scripts/packaging/defaults.yaml
 ```
 
 The resulting package installation files can be found in `colcon_ws/install_aarch64` and can be copied to the target device,
