@@ -360,6 +360,8 @@ echo "source <prefix_path>/install_aarch64/setup.bash" >> ~/.bashrc
 
 ## Contributing
 
+Please follow the contribution guidelines in [CONTRIBUTING](CONTRIBUTING.md).
+
 ### Code format
 
 One requires clang-format-10 to format the code. Use the following command to format it:
