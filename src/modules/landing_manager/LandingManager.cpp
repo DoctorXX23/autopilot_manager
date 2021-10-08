@@ -202,7 +202,8 @@ void LandingManager::mapper() {
 
     // Check for input health
     if (!healthCheck(depth_msg)) {
-        std::cerr << landingManagerOut << " input is unhealthy" << std::endl;
+        std::cerr << landingManagerOut << " Input is unhealthy" << std::endl;
+        std::lock_guard<std::mutex> lock(_landing_manager_mutex);
         _state = landing_mapper::eLandingMapperState::UNHEALTHY;
         return;
     }
