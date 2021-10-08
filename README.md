@@ -329,14 +329,14 @@ ros2 run autopilot-manager autopilot-manager \
   -a install/autopilot-manager/share/autopilot-manager/data/example/custom_action/custom_action_sitl.json \
   -c install/autopilot-manager/share/autopilot-manager/data/config/autopilot_manager.conf \
   --ros-args -p sim:=true -p use_sim_time:=true
-# Start the microrpts_agent
 ```
 
 #### Terminal 3
 
 ```bash
 source colcon_ws/install/setup.bash
-microrpts_agent -t UDP
+# Start the micrortps_agent
+micrortps_agent -t UDP
 ```
 
 #### Using ROS2 launch
