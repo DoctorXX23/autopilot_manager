@@ -140,11 +140,15 @@ git clone git@github.com:Auterion/autopilot_manager.git src/autopilot_manager
 # Clone the required dependencies
 git clone https://gitlab.com/libeigen/eigen.git -b 3.3.9 src/eigen
 git clone git@github.com:Auterion/image_downsampler.git src/image_downsampler
-git clone git@github.com:Auterion/landing_mapper.git -b develop src/landing_mapper
+git clone git@github.com:Auterion/landing_mapper.git -b develop src/landing_mapper # private repo! Please request access to Auterion or request for the deb package
 git clone git@github.com:Auterion/px4_msgs.git -b develop src/px4_msgs
 # Build with Release optimizations
 colcon build --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
+
+#### Landing Mapper install
+
+The `landing_mapper` library is a required component to enable the safe landing feature in the Autopilot Manager. If you are trying to build this repository to use this capability, please contact Auterion to request either access to the `landing_mapper` repository or to a deb package to install the library system-wide.
 
 ### *px4_ros_com* as an execution dependency
 
