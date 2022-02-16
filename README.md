@@ -332,7 +332,7 @@ cd colcon_ws
 ros2 run autopilot-manager autopilot-manager \
   -a install/autopilot-manager/share/autopilot-manager/data/example/custom_action/custom_action_sitl.json \
   -c install/autopilot-manager/share/autopilot-manager/data/config/autopilot_manager.conf \
-  --ros-args -p sim:=true -p use_sim_time:=true
+  --ros-args -p sim:=true,use_sim_time:=true
 ```
 
 #### Terminal 3
