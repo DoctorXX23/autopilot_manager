@@ -208,10 +208,10 @@ the case one is installing this on a Mission Computer connect to an autopilot th
     Port = 14590
 
     # autopilot-manager example scripts
-    [UdpEndpoint pymavlink]
+    [UdpEndpoint autopilot-manager-example-scripts]
     Mode = Normal
     Address = 127.0.0.1
-    Port = 14561
+    Port = 14591
 ```
 
 After saving the file, restart the `mavlink-router` service with:
