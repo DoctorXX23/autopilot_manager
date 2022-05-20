@@ -74,6 +74,12 @@ class AutopilotManager {
     std::string _safe_landing_on_no_safe_land = "";
     uint8_t _safe_landing_try_landing_after_action = false;
 
+    // Landing site search configurations
+    double _landing_site_search_max_speed = 0.0;
+    double _landing_site_search_spiral_spacing = 0.0;
+    double _landing_site_search_spiral_max_size = 0.0;
+    int _landing_site_search_spiral_points = 0;
+
     // Simple collision avoidance configurations
     uint8_t _simple_collision_avoid_enabled = false;
     double _simple_collision_avoid_distance_threshold = 0.0;

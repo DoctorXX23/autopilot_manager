@@ -46,6 +46,7 @@
 #include <atomic>
 #include <future>
 #include <iostream>
+#include <landing_planner/LandingPlanner.hpp>
 #include <string>
 
 // MAVSDK dependencies
@@ -93,6 +94,11 @@ class MissionManager : public ModuleBase {
         std::string safe_landing_on_no_safe_land = "";
         uint8_t safe_landing_try_landing_after_action = 0U;
 
+        double landing_site_search_max_speed = 0.0;
+        double landing_site_search_spiral_spacing = 0.0;
+        double landing_site_search_spiral_max_size = 0.0;
+        int landing_site_search_spiral_points = 0;
+
         uint8_t simple_collision_avoid_enabled = 0U;
         double simple_collision_avoid_distance_threshold = 0.0;
         std::string simple_collision_avoid_action_on_condition_true = "";
@@ -120,10 +126,21 @@ class MissionManager : public ModuleBase {
     void handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now);
     void handle_simple_collision_avoidance(std::chrono::time_point<std::chrono::system_clock> now);
 
+    void update_landing_site_search(const uint8_t safe_landing_state, const bool land_when_found_site);
+    void landing_site_search_has_ended();
+
     void set_global_position_reference();
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
     bool arrived_to_new_waypoint();
+    bool is_stationary();
 
+    void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint,
+                                  const double altitude, const double yaw_rad);
+
+    mavsdk::geometry::CoordinateTransformation::LocalCoordinate get_local_position_from_local_offset(
+        const double& offset_x, const double& offset_y) const;
+    mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_position(
+        mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position) const;
     mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
 
@@ -160,6 +177,9 @@ class MissionManager : public ModuleBase {
     std::atomic<double> _current_pos_x;
     std::atomic<double> _current_pos_y;
     std::atomic<double> _current_pos_z;
+    std::atomic<double> _current_vel_x;
+    std::atomic<double> _current_vel_y;
+    std::atomic<double> _current_vel_z;
     std::atomic<double> _current_yaw;
     std::atomic<double> _new_latitude;
     std::atomic<double> _new_longitude;
@@ -167,6 +187,9 @@ class MissionManager : public ModuleBase {
     std::atomic<double> _previously_set_waypoint_latitude;
     std::atomic<double> _previously_set_waypoint_longitude;
     std::atomic<double> _previously_set_waypoint_altitude_amsl;
+    std::atomic<double> _original_max_speed;
+
+    landing_planner::LandingPlanner _landing_planner;
 
     std::chrono::time_point<std::chrono::system_clock> _last_time{};
 

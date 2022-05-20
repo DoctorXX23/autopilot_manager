@@ -41,6 +41,7 @@
 #pragma once
 
 #include <common.h>
+#include <timing_tools/timing_tools.h>
 
 #include <Eigen/Core>
 #include <ModuleBase.hpp>
@@ -115,6 +116,8 @@ class LandingManager : public rclcpp::Node, ModuleBase {
                          const rclcpp::Time& timestamp);
     void visualizeMap();
 
+    void printTimingStats() const;
+
     std::function<LandingManagerConfiguration()> _config_update_callback;
 
     std::unique_ptr<landing_mapper::LandingMapper<float>> _mapper;
@@ -126,6 +129,10 @@ class LandingManager : public rclcpp::Node, ModuleBase {
     std::mutex landing_manager_config_mtx;
 
     std::shared_ptr<viz::MapVisualizer> _visualizer;
+
+    timing_tools::FrequencyMeter _frequency_mapper;
+    timing_tools::FrequencyMeter _frequency_visualise_map;
+    rclcpp::TimerBase::SharedPtr _timer_timing_stats;
 
     rclcpp::TimerBase::SharedPtr _timer_mapper;
     rclcpp::TimerBase::SharedPtr _timer_map_visualizer;

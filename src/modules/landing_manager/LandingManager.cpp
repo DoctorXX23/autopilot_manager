@@ -48,6 +48,9 @@ LandingManager::LandingManager()
       _config_update_callback([]() { return LandingManagerConfiguration{}; }),
       _visualize(true),
       _visualizer(std::make_shared<viz::MapVisualizer>(this)),
+      _frequency_mapper("mapper"),
+      _frequency_visualise_map("visualise map"),
+      _timer_timing_stats(create_wall_timer(5s, std::bind(&LandingManager::printTimingStats, this))),
       _timer_mapper({}),
       _timer_map_visualizer({}),
       _state(landing_mapper::eLandingMapperState::UNKNOWN),
@@ -195,6 +198,8 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
 }
 
 void LandingManager::mapper() {
+    _frequency_mapper.tic();
+
     // check for parameter updates
     // TODO: make this call dependent on a dbus param update on the Autopilot Manager
     // instead of running at every loop update
@@ -205,6 +210,8 @@ void LandingManager::mapper() {
     // Only process the data when the Autopilot Manager is enabled and the Safe Landing
     // is set as the Decision Maker Input.
     if (_landing_manager_config.autopilot_manager_enabled && _landing_manager_config.safe_landing_enabled) {
+        timing_tools::Timer timer_mapper("mapper: total", true);
+
         // Here we capture the downsampled depth data computed in the SensorManager
         std::shared_ptr<ExtendedDownsampledImageF> depth_msg = _downsampled_depth_update_callback();
 
@@ -218,6 +225,7 @@ void LandingManager::mapper() {
             const Eigen::Vector3f position = depth_msg->position;
             const Eigen::Quaternionf orientation = depth_msg->orientation;
 
+            timing_tools::Timer timer_pointcloud("point cloud: total     ", true);
             {
                 std::lock_guard<std::mutex> lock(_map_mutex);
                 _pointcloud_for_mapper.clear();
@@ -226,6 +234,7 @@ void LandingManager::mapper() {
                 const Eigen::Vector2f principal_point = intrinsics.principal_point();
                 const Eigen::Vector2f inverse_focal_length = intrinsics.inverse_focal_length();
 
+                timing_tools::Timer timer_pointcloud_depth_to_3D("point cloud: depth->3D ", true);
                 for (const DepthPixelF& depth_pixel : depth_pixel_array) {
                     const float depth = depth_pixel.depth;
 
@@ -241,19 +250,25 @@ void LandingManager::mapper() {
                         _visualizer->add_point_to_point_cloud(point, _visualize);
                     }
                 }
+                timer_pointcloud_depth_to_3D.stop();
 
+                timing_tools::Timer timer_pointcloud_map_update("point cloud: map update", true);
                 _mapper->updateCloud(_pointcloud_for_mapper);
+                timer_pointcloud_map_update.stop();
 
                 _visualizer->visualizePointCloud(_visualize);
             }
+            timer_pointcloud.stop();
 
             // Find plain ground
             _mapper->updateVehiclePosition(position);
             _mapper->updateVehicleOrientation(orientation);
 
+            timing_tools::Timer timer_check_landing_area("check landing area", true);
             Eigen::Vector3f ground_position;
             const landing_mapper::eLandingMapperState state = _mapper->checkLandingArea(ground_position);
             const float height_above_obstacle = _mapper->getHeightAboveObstacle();
+            timer_check_landing_area.stop();
 
             {
                 std::lock_guard<std::mutex> lock(_landing_manager_mutex);
@@ -267,7 +282,7 @@ void LandingManager::mapper() {
             _height_above_obstacle_pub->publish(height_above_obstacle_msg);
 
             // Show result
-            visualizeResult(state, ground_position, rclcpp::Time());
+            visualizeResult(state, ground_position, now());
             // std::cout << landingManagerOut << " height " << ground_position.z() - local_state.position.z() <<
             // std::endl;
 
@@ -294,12 +309,14 @@ void LandingManager::mapper() {
 
             _landing_state_pub->publish(landing_state_msg);
         }
+
+        timer_mapper.stop();
     }
 }
 
 void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, const Eigen::Vector3f& position,
                                      const rclcpp::Time& timestamp) {
-    Eigen::Vector3f vis_position(position[0], position[1], position[2] - 0.5);
+    Eigen::Vector3f vis_position(position[0], position[1], position[2] - 1.0);
     if (state == landing_mapper::eLandingMapperState::CAN_LAND) {
         _visualizer->publishSafeLand(vis_position, timestamp, _mapper_parameter.window_size_m, _visualize);
     } else if (state == landing_mapper::eLandingMapperState::CLOSE_TO_GROUND) {
@@ -309,4 +326,20 @@ void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, 
     }
 }
 
-void LandingManager::visualizeMap() { _visualizer->visualizeEsdf(_mapper->getEsdf(), now(), _visualize); }
+void LandingManager::visualizeMap() {
+    _frequency_visualise_map.tic();
+    timing_tools::Timer timer_visualise_map("visualise map", true);
+    _visualizer->visualizeEsdf(_mapper->getEsdf(), now(), _visualize);
+    _visualizer->visualizeHeightMap(_mapper->getHeightMap(), now(), _visualize);
+    timer_visualise_map.stop();
+}
+
+void LandingManager::printTimingStats() const {
+    std::stringstream ss;
+    timing_tools::printTimers(ss);
+    timing_tools::printFrequencies(ss);
+    std::cout << std::endl << ss.str();
+
+    timing_tools::resetTimingStatistics();
+    timing_tools::resetFrequencyStatistics();
+}

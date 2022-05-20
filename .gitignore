@@ -5,3 +5,4 @@ debian/changelog
 /.vscode
 .cproject
 .settings/
+__pycache__

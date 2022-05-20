@@ -16,6 +16,7 @@ class AutopilotManagerConfig {
     bool InitFromMessage(DBusMessage *request);
     bool WriteToFile(const std::string &config_path) const;
     bool InitFromFile(const std::string &config_path);
+    void Print() const;
 
     uint8_t autopilot_manager_enabled = false;
     std::string decision_maker_input_type = "";
@@ -42,6 +43,12 @@ class AutopilotManagerConfig {
     double safe_landing_distance_to_ground = 0.0;
     std::string safe_landing_on_no_safe_land = "";
     uint8_t safe_landing_try_landing_after_action = false;
+
+    // Landing site search configurations
+    double landing_site_search_max_speed = 0.0;
+    double landing_site_search_spiral_spacing = 0.0;
+    double landing_site_search_spiral_max_size = 0.0;
+    int landing_site_search_spiral_points = 0;
 
     // Simple collision avoidance configurations
     uint8_t simple_collision_avoid_enabled = false;

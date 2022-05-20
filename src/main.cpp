@@ -50,8 +50,6 @@ auto main(int argc, char* argv[]) -> int {
     std::string path_to_custom_action_file{
         "/shared_container_dir/autopilot-manager/data/custom_action/custom_action.json"};
 
-    parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
-
     // Initialize communications via the rmw implementation and set up a global signal handler.
     rclcpp::init(argc, argv, rclcpp::InitOptions());
 
@@ -60,6 +58,10 @@ auto main(int argc, char* argv[]) -> int {
 
     // Init main event loop for GLib/DBUS
     GMainLoop* mainloop = g_main_loop_new(nullptr, static_cast<gboolean>(false));
+
+    // Extract paths to config files
+    // WARNING: This alters the ordering of argv
+    parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
 
     auto autopilot_manager = std::make_shared<AutopilotManager>(std::to_string(mavlink_port), path_to_apm_config_file,
                                                                 path_to_custom_action_file);

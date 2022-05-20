@@ -17,12 +17,14 @@
 
   <depend>image_downsampler</depend>
   <depend>landing_mapper</depend>
+  <depend>landing_planner</depend>
   <depend>px4_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tbb</depend>
   <depend>tf2_ros</depend>
+  <depend>timing_tools</depend>
   <depend>visualization_msgs</depend>
 
   <exec_depend>px4_ros_com</exec_depend>
