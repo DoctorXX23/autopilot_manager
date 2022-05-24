@@ -351,6 +351,12 @@ void AutopilotManager::start() {
             return _landing_manager->get_latest_landing_condition_state();
         });
 
+        // Init the callback for getting the landing condition state at a particular position
+        _mission_manager->getCanLandAtPositionStateCallback([this](float x, float y) {
+            std::lock_guard<std::mutex> lock(_landing_condition_state_mutex);
+            return _landing_manager->get_landing_condition_state_at_position(x, y);
+        });
+
         // Init the callback for getting the latest landing condition state
         _mission_manager->getHeightAboveObstacleCallback([this]() {
             std::lock_guard<std::mutex> lock(_height_above_obstacle_mutex);

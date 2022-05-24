@@ -116,6 +116,10 @@ class MissionManager : public ModuleBase {
         _landing_condition_state_update_callback = callback;
     }
 
+    void getCanLandAtPositionStateCallback(std::function<uint8_t(float x, float y)> callback) {
+        _landing_planner.setLandingStateAtPositionCallback(callback);
+    }
+
     void getHeightAboveObstacleCallback(std::function<float()> callback) {
         _height_above_obstacle_update_callback = callback;
     }

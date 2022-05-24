@@ -90,6 +90,13 @@ class LandingManager : public rclcpp::Node, ModuleBase {
         return _state;
     }
 
+    landing_mapper::eLandingMapperState RCPPUTILS_TSA_GUARDED_BY(_landing_manager_mutex)
+        get_landing_condition_state_at_position(float x, float y) {
+        std::lock_guard<std::mutex> lock_manager(_landing_manager_mutex);
+        std::lock_guard<std::mutex> lock_map(_map_mutex);
+        return _mapper->computeLandingStateAtPositionXY(x, y);
+    }
+
     float RCPPUTILS_TSA_GUARDED_BY(_landing_manager_mutex) get_latest_height_above_obstacle() {
         std::lock_guard<std::mutex> lock(_landing_manager_mutex);
         return _height_above_obstacle;
