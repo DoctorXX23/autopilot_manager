@@ -137,6 +137,7 @@ class MissionManager : public ModuleBase {
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
     bool arrived_to_new_waypoint();
     bool is_stationary();
+    bool debounce_is_stationary(bool is_stationary);
 
     void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint,
                                   const double altitude, const double yaw_rad);
@@ -171,6 +172,8 @@ class MissionManager : public ModuleBase {
     std::atomic<bool> _is_home_position_ok;
     std::atomic<bool> _get_gps_origin_success;
     std::atomic<bool> _global_origin_reference_set;
+
+    std::atomic<int> _is_stationary_debounce_counter;
 
     std::atomic<double> _current_latitude;
     std::atomic<double> _current_longitude;

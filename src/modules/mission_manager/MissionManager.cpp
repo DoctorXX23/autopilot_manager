@@ -55,6 +55,7 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
       _action_triggered{false},
       _get_gps_origin_success{false},
       _global_origin_reference_set{false},
+      _is_stationary_debounce_counter{0},
       _current_latitude{0.0},
       _current_longitude{0.0},
       _current_altitude_amsl{0.0},
@@ -192,10 +193,28 @@ bool MissionManager::arrived_to_new_waypoint() {
 }
 
 bool MissionManager::is_stationary() {
-    static const double vel_tol = 0.5;
+    static const double vel_tol = 0.2;
     const double vel_mag =
         std::sqrt(std::pow(_current_vel_x, 2) + std::pow(_current_vel_y, 2) + std::pow(_current_vel_z, 2));
-    return (vel_mag < vel_tol);
+    return debounce_is_stationary(vel_mag < vel_tol);
+}
+
+bool MissionManager::debounce_is_stationary(bool is_stationary) {
+    // The purpose of the debouncing is not only to prevent multiple triggers, but also to include a delay between when
+    // the vehicle stops and when it is allowed to process any actions. This gives the landing site detection
+    // time to assess the ground below the stopping point.
+    static const int DEBOUNCE_COUNT_REQUIRED = 10;
+    if (is_stationary) {
+        _is_stationary_debounce_counter++;
+        if (_is_stationary_debounce_counter >= DEBOUNCE_COUNT_REQUIRED) {
+            // Vehicle is confirmed to be stationary
+            _is_stationary_debounce_counter = 0;
+            return true;
+        }
+    } else {
+        _is_stationary_debounce_counter = 0;
+    }
+    return false;
 }
 
 void MissionManager::go_to_new_local_waypoint(
