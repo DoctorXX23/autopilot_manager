@@ -217,6 +217,20 @@ bool MissionManager::debounce_is_stationary(bool is_stationary) {
     return false;
 }
 
+bool MissionManager::under_manual_control() {
+    switch (_flight_mode) {
+        case mavsdk::Telemetry::FlightMode::Manual:
+        case mavsdk::Telemetry::FlightMode::Altctl:
+        case mavsdk::Telemetry::FlightMode::Posctl:
+        case mavsdk::Telemetry::FlightMode::Acro:
+        case mavsdk::Telemetry::FlightMode::Stabilized:
+        case mavsdk::Telemetry::FlightMode::Rattitude:
+            return true;
+        default:
+            return false;
+    }
+}
+
 void MissionManager::go_to_new_local_waypoint(
     mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint, const double altitude,
     const double yaw_rad) {
@@ -476,6 +490,12 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 // Vehicle landed. Stop the landing site search.
                 _landing_planner.endSearch();
                 landing_site_search_has_ended();
+            } else if (under_manual_control()) {
+                // Pilot took control. Stop the landing site search.
+                std::cout << std::string(missionManagerOut) << "Pilot has taken manual control (" << _flight_mode
+                          << " mode). Cancelling safe landing." << std::endl;
+                _landing_planner.endSearch();
+                landing_site_search_has_ended();
             } else {
                 update_landing_site_search(safe_landing_state, safe_landing_try_landing_after_action);
             }
@@ -689,6 +709,10 @@ void MissionManager::decision_maker_run() {
     // Get yaw
     _telemetry->subscribe_attitude_euler(
         [this](mavsdk::Telemetry::EulerAngle euler_angle) { _current_yaw = euler_angle.yaw_deg * M_PI / 180.0; });
+
+    // Get the flight mode
+    _telemetry->subscribe_flight_mode(
+        [this](mavsdk::Telemetry::FlightMode flight_mode) { _flight_mode = flight_mode; });
 
     // Get the landing state so we know when the vehicle is in-air, landing or on-ground
     _telemetry->subscribe_landed_state(

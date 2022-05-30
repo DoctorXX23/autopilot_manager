@@ -139,6 +139,8 @@ class MissionManager : public ModuleBase {
     bool is_stationary();
     bool debounce_is_stationary(bool is_stationary);
 
+    bool under_manual_control();
+
     void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint,
                                   const double altitude, const double yaw_rad);
 
@@ -167,6 +169,7 @@ class MissionManager : public ModuleBase {
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
 
     std::atomic<bool> _action_triggered;
+    std::atomic<mavsdk::Telemetry::FlightMode> _flight_mode{mavsdk::Telemetry::FlightMode::Unknown};
     std::atomic<mavsdk::Telemetry::LandedState> _landed_state{mavsdk::Telemetry::LandedState::Unknown};
     std::atomic<bool> _is_global_position_ok;
     std::atomic<bool> _is_home_position_ok;
