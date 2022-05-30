@@ -343,19 +343,31 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                                          landing_site_search_spiral_max_size,
                                                          landing_site_search_spiral_points);
 
-                            // Lower the maximum speed
-                            _action->set_maximum_speed(landing_site_search_max_speed);
-                            std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
-                                      << _original_max_speed << " to " << landing_site_search_max_speed << std::endl;
+                            if (_landing_planner.isActive()) {
+                                // Lower the maximum speed
+                                _action->set_maximum_speed(landing_site_search_max_speed);
+                                std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
+                                          << _original_max_speed << " to " << landing_site_search_max_speed
+                                          << std::endl;
 
-                            // Set the first waypoint in the search pattern
-                            go_to_new_local_waypoint(_landing_planner.getCurrentWaypoint(),
-                                                     _landing_planner.getSearchAltitude(), _current_yaw * 180. / M_PI);
-                            status = std::string(missionManagerOut) + "Landing site search started at: Latitude " +
-                                     std::to_string(_new_latitude) + " deg, Longitude " +
-                                     std::to_string(_new_longitude) + " deg, Altitude (AMSL) " +
-                                     std::to_string(_new_altitude_amsl) + " meters";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+                                // Set the first waypoint in the search pattern
+                                go_to_new_local_waypoint(_landing_planner.getCurrentWaypoint(),
+                                                         _landing_planner.getSearchAltitude(),
+                                                         _current_yaw * 180. / M_PI);
+                                status = std::string(missionManagerOut) + "Landing site search started at: Latitude " +
+                                         std::to_string(_new_latitude) + " deg, Longitude " +
+                                         std::to_string(_new_longitude) + " deg, Altitude (AMSL) " +
+                                         std::to_string(_new_altitude_amsl) + " meters";
+                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+                            } else {
+                                // Planner did not start correctly.
+                                _action->hold();
+
+                                status = std::string(missionManagerOut) +
+                                         "Landing planner could not start. Holding position...";
+                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning,
+                                                                  status);
+                            }
                         } else {
                             _action->hold();
 
