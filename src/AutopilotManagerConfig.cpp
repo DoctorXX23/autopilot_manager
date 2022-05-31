@@ -66,9 +66,9 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
             &safe_landing_distance_to_ground, DBUS_TYPE_STRING, &returnedSafeLandingOnNoSafeLand, DBUS_TYPE_UINT32,
             &safe_landing_try_landing_after_action,
             // Landing site search configurations
-            DBUS_TYPE_DOUBLE, &landing_site_search_max_speed, DBUS_TYPE_DOUBLE, &landing_site_search_spiral_spacing,
-            DBUS_TYPE_DOUBLE, &landing_site_search_spiral_max_size, DBUS_TYPE_UINT32,
-            &landing_site_search_spiral_points,
+            DBUS_TYPE_DOUBLE, &landing_site_search_max_speed, DBUS_TYPE_DOUBLE, &landing_site_search_max_distance,
+            // Spiral search strategy
+            DBUS_TYPE_DOUBLE, &landing_site_search_spiral_spacing, DBUS_TYPE_UINT32, &landing_site_search_spiral_points,
             // Simple collision avoidance configurations
             DBUS_TYPE_UINT32, &simple_collision_avoid_enabled, DBUS_TYPE_DOUBLE,
             &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING, &returnedCollAvoidOnCondTrue,
@@ -112,9 +112,8 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
                       << std::to_string(safe_landing_try_landing_after_action) << std::endl;
 
             std::cout << "    landing_site_search_max_speed: " << landing_site_search_max_speed << std::endl;
+            std::cout << "    landing_site_search_max_distance: " << landing_site_search_max_distance << std::endl;
             std::cout << "    landing_site_search_spiral_spacing: " << landing_site_search_spiral_spacing << std::endl;
-            std::cout << "    landing_site_search_spiral_max_size: " << landing_site_search_spiral_max_size
-                      << std::endl;
             std::cout << "    landing_site_search_spiral_points: " << landing_site_search_spiral_points << std::endl;
 
             std::cout << "    simple_collision_avoid_enabled: " << std::boolalpha
@@ -149,9 +148,9 @@ bool AutopilotManagerConfig::AppendToMessage(DBusMessage* reply) const {
             &safe_landing_distance_to_ground, DBUS_TYPE_STRING, &safe_landing_on_no_safe_land, DBUS_TYPE_UINT32,
             &safe_landing_try_landing_after_action,
             // Landing site search configurations
-            DBUS_TYPE_DOUBLE, &landing_site_search_max_speed, DBUS_TYPE_DOUBLE, &landing_site_search_spiral_spacing,
-            DBUS_TYPE_DOUBLE, &landing_site_search_spiral_max_size, DBUS_TYPE_UINT32,
-            &landing_site_search_spiral_points,
+            DBUS_TYPE_DOUBLE, &landing_site_search_max_speed, DBUS_TYPE_DOUBLE, &landing_site_search_max_distance,
+            // Spiral search strategy config
+            DBUS_TYPE_DOUBLE, &landing_site_search_spiral_spacing, DBUS_TYPE_UINT32, &landing_site_search_spiral_points,
             // Simple collision avoidance configurations
             DBUS_TYPE_UINT32, &simple_collision_avoid_enabled, DBUS_TYPE_DOUBLE,
             &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING,
@@ -193,9 +192,8 @@ bool AutopilotManagerConfig::WriteToFile(const std::string& config_path) const {
              << std::endl;
 
         file << "landing_site_search_max_speed=" << std::to_string(landing_site_search_max_speed) << std::endl;
+        file << "landing_site_search_max_distance=" << std::to_string(landing_site_search_max_distance) << std::endl;
         file << "landing_site_search_spiral_spacing=" << std::to_string(landing_site_search_spiral_spacing)
-             << std::endl;
-        file << "landing_site_search_spiral_max_size=" << std::to_string(landing_site_search_spiral_max_size)
              << std::endl;
         file << "landing_site_search_spiral_points=" << std::to_string(landing_site_search_spiral_points) << std::endl;
 
@@ -294,11 +292,11 @@ bool AutopilotManagerConfig::InitFromFile(const std::string& config_path) {
             if (line.find("landing_site_search_max_speed") != std::string::npos) {
                 landing_site_search_max_speed = std::stod(sin.str());
             }
+            if (line.find("landing_site_search_max_distance") != std::string::npos) {
+                landing_site_search_max_distance = std::stod(sin.str());
+            }
             if (line.find("landing_site_search_spiral_spacing") != std::string::npos) {
                 landing_site_search_spiral_spacing = std::stod(sin.str());
-            }
-            if (line.find("landing_site_search_spiral_max_size") != std::string::npos) {
-                landing_site_search_spiral_max_size = std::stod(sin.str());
             }
             if (line.find("landing_site_search_spiral_points") != std::string::npos) {
                 landing_site_search_spiral_points = std::stoi(sin.str());
@@ -351,8 +349,9 @@ void AutopilotManagerConfig::Print() const {
               << std::to_string(safe_landing_try_landing_after_action) << std::endl;
 
     std::cout << "    landing_site_search_max_speed: " << landing_site_search_max_speed << std::endl;
+    std::cout << "    landing_site_search_max_distance: " << landing_site_search_max_distance << std::endl;
+
     std::cout << "    landing_site_search_spiral_spacing: " << landing_site_search_spiral_spacing << std::endl;
-    std::cout << "    landing_site_search_spiral_max_size: " << landing_site_search_spiral_max_size << std::endl;
     std::cout << "    landing_site_search_spiral_points: " << landing_site_search_spiral_points << std::endl;
 
     std::cout << "    simple_collision_avoid_enabled: " << std::boolalpha

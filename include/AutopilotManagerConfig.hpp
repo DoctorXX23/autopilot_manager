@@ -46,8 +46,9 @@ class AutopilotManagerConfig {
 
     // Landing site search configurations
     double landing_site_search_max_speed = 0.0;
+    double landing_site_search_max_distance = 0.0;
+    // Spiral search config
     double landing_site_search_spiral_spacing = 0.0;
-    double landing_site_search_spiral_max_size = 0.0;
     int landing_site_search_spiral_points = 0;
 
     // Simple collision avoidance configurations

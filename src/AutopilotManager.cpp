@@ -140,8 +140,9 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
 
     // Landing site search configurations
     _landing_site_search_max_speed = config.landing_site_search_max_speed;
+    _landing_site_search_max_distance = config.landing_site_search_max_distance;
+    // Spiral search strategy
     _landing_site_search_spiral_spacing = config.landing_site_search_spiral_spacing;
-    _landing_site_search_spiral_max_size = config.landing_site_search_spiral_max_size;
     _landing_site_search_spiral_points = config.landing_site_search_spiral_points;
 
     // Simple collision avoidance configurations
@@ -198,8 +199,9 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
 
     // Landing site search configurations
     config.landing_site_search_max_speed = _landing_site_search_max_speed;
+    config.landing_site_search_max_distance = _landing_site_search_max_distance;
+    // Spiral search strategy
     config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
-    config.landing_site_search_spiral_max_size = _landing_site_search_spiral_max_size;
     config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
 
     // Simple collision avoidance configurations
@@ -298,8 +300,8 @@ void AutopilotManager::start() {
             config.safe_landing_on_no_safe_land = _safe_landing_on_no_safe_land;
             config.safe_landing_try_landing_after_action = _safe_landing_try_landing_after_action;
             config.landing_site_search_max_speed = _landing_site_search_max_speed;
+            config.landing_site_search_max_distance = _landing_site_search_max_distance;
             config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
-            config.landing_site_search_spiral_max_size = _landing_site_search_spiral_max_size;
             config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
             config.simple_collision_avoid_enabled = _simple_collision_avoid_enabled;
             config.simple_collision_avoid_distance_threshold = _simple_collision_avoid_distance_threshold;

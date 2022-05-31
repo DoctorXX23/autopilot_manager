@@ -94,9 +94,12 @@ class MissionManager : public ModuleBase {
         std::string safe_landing_on_no_safe_land = "";
         uint8_t safe_landing_try_landing_after_action = 0U;
 
+        // Landing site search config
         double landing_site_search_max_speed = 0.0;
+        double landing_site_search_max_distance = 0.0;
+
+        // Spiral search strategy config
         double landing_site_search_spiral_spacing = 0.0;
-        double landing_site_search_spiral_max_size = 0.0;
         int landing_site_search_spiral_points = 0;
 
         uint8_t simple_collision_avoid_enabled = 0U;
