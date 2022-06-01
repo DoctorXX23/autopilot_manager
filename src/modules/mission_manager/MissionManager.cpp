@@ -352,10 +352,15 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                       << "***" << std::endl
                                       << "*" << std::endl;
 
+                            // Configure landing planner
+                            landing_planner::LandingPlannerConfig lp_config;
+                            lp_config.max_distance = landing_site_search_max_distance;
+                            lp_config.spiral_search_spacing = landing_site_search_spiral_spacing;
+                            lp_config.spiral_search_points = landing_site_search_spiral_points;
+
+                            // Start search
                             _landing_planner.startSearch(_current_pos_x, _current_pos_y, _current_yaw,
-                                                         _current_altitude_amsl, landing_site_search_max_distance,
-                                                         landing_site_search_spiral_spacing,
-                                                         landing_site_search_spiral_points);
+                                                         _current_altitude_amsl, lp_config);
 
                             if (_landing_planner.isActive()) {
                                 // Lower the maximum speed
