@@ -142,6 +142,7 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
     _landing_site_search_max_speed = config.landing_site_search_max_speed;
     _landing_site_search_max_distance = config.landing_site_search_max_distance;
     _landing_site_search_min_distance_after_abort = config.landing_site_search_min_distance_after_abort;
+    _landing_site_search_strategy = config.landing_site_search_strategy;
     // Spiral search strategy
     _landing_site_search_spiral_spacing = config.landing_site_search_spiral_spacing;
     _landing_site_search_spiral_points = config.landing_site_search_spiral_points;
@@ -202,6 +203,7 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     config.landing_site_search_max_speed = _landing_site_search_max_speed;
     config.landing_site_search_max_distance = _landing_site_search_max_distance;
     config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
+    config.landing_site_search_strategy = _landing_site_search_strategy;
     // Spiral search strategy
     config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
     config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
@@ -304,6 +306,7 @@ void AutopilotManager::start() {
             config.landing_site_search_max_speed = _landing_site_search_max_speed;
             config.landing_site_search_max_distance = _landing_site_search_max_distance;
             config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
+            config.landing_site_search_strategy = _landing_site_search_strategy;
             config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
             config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
             config.simple_collision_avoid_enabled = _simple_collision_avoid_enabled;
