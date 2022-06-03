@@ -251,6 +251,8 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
     const std::string safe_landing_on_no_safe_land = _mission_manager_config.safe_landing_on_no_safe_land;
     const double landing_site_search_max_speed = _mission_manager_config.landing_site_search_max_speed;
     const double landing_site_search_max_distance = _mission_manager_config.landing_site_search_max_distance;
+    const double landing_site_search_min_distance_after_abort =
+        _mission_manager_config.landing_site_search_min_distance_after_abort;
     const double landing_site_search_spiral_spacing = _mission_manager_config.landing_site_search_spiral_spacing;
     const int landing_site_search_spiral_points = _mission_manager_config.landing_site_search_spiral_points;
     const double global_position_waypoint_lat = _mission_manager_config.global_position_waypoint_lat;
@@ -355,6 +357,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             // Configure landing planner
                             landing_planner::LandingPlannerConfig lp_config;
                             lp_config.max_distance = landing_site_search_max_distance;
+                            lp_config.min_distance_after_abort = landing_site_search_min_distance_after_abort;
                             lp_config.spiral_search_spacing = landing_site_search_spiral_spacing;
                             lp_config.spiral_search_points = landing_site_search_spiral_points;
 

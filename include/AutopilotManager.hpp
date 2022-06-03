@@ -77,6 +77,7 @@ class AutopilotManager {
     // Landing site search configurations
     double _landing_site_search_max_speed = 0.0;
     double _landing_site_search_max_distance = 0.0;
+    double _landing_site_search_min_distance_after_abort = 0.0;
 
     // Spiral search strategy configuration
     double _landing_site_search_spiral_spacing = 0.0;
