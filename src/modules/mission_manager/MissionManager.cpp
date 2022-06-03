@@ -386,6 +386,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             } else {
                                 // Planner did not start correctly.
                                 _action->hold();
+                                landing_site_search_has_ended();
 
                                 status = std::string(missionManagerOut) +
                                          "Landing planner could not start. Holding position...";
