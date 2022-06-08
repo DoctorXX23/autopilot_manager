@@ -37,6 +37,11 @@ class AutopilotManagerConfig {
     double global_position_waypoint_lon = 0.0;
     double global_position_waypoint_alt_amsl = 0.0;
 
+    // Depth camera configuration
+    double camera_offset_x = 0.0;
+    double camera_offset_y = 0.0;
+    double camera_yaw = 0.0;
+
     // Safe landing configurations
     uint8_t safe_landing_enabled = false;
     double safe_landing_area_square_size = 0.0;

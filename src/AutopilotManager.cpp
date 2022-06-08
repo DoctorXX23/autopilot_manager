@@ -131,6 +131,11 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
     _global_position_waypoint_lon = config.global_position_waypoint_lon;
     _global_position_waypoint_alt_amsl = config.global_position_waypoint_alt_amsl;
 
+    // Depth camera confguration
+    _camera_offset_x = config.camera_offset_x;
+    _camera_offset_y = config.camera_offset_y;
+    _camera_yaw = config.camera_yaw;
+
     // Safe landing configurations
     _safe_landing_enabled = config.safe_landing_enabled;
     _safe_landing_area_square_size = config.safe_landing_area_square_size;
@@ -191,6 +196,11 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     config.global_position_waypoint_lat = _global_position_waypoint_lat;
     config.global_position_waypoint_lon = _global_position_waypoint_lon;
     config.global_position_waypoint_alt_amsl = _global_position_waypoint_alt_amsl;
+
+    // Depth camera confguration
+    config.camera_offset_x = _camera_offset_x;
+    config.camera_offset_y = _camera_offset_y;
+    config.camera_yaw = _camera_yaw;
 
     // Safe landing configurations
     config.safe_landing_enabled = _safe_landing_enabled;
@@ -373,7 +383,7 @@ void AutopilotManager::start() {
 
         // Init and run the Sensor Manager
         _sensor_manager->init();
-        _sensor_manager->set_camera_static_tf(0.1, 0., 0.);
+        _sensor_manager->set_camera_static_tf(_camera_offset_x, _camera_offset_y, _camera_yaw);
         _sensor_manager_th = std::thread(&AutopilotManager::run_sensor_manager, this);
 
         // Init and run the Collision Avoidance Manager

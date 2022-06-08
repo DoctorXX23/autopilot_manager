@@ -254,6 +254,16 @@ bool AutopilotManagerConfig::InitFromFile(const std::string& config_path) {
                 global_position_waypoint_alt_amsl = std::stod(sin.str());
             }
 
+            if (line.find("camera_offset_x") != std::string::npos) {
+                camera_offset_x = std::stod(sin.str());
+            }
+            if (line.find("camera_offset_y") != std::string::npos) {
+                camera_offset_y = std::stod(sin.str());
+            }
+            if (line.find("camera_yaw") != std::string::npos) {
+                camera_yaw = std::stod(sin.str());
+            }
+
             if (line.find("safe_landing_enabled") != std::string::npos) {
                 safe_landing_enabled = std::stoi(sin.str());
             }
@@ -327,6 +337,10 @@ void AutopilotManagerConfig::Print() const {
     std::cout << "    global_position_waypoint_lat: " << global_position_waypoint_lat << std::endl;
     std::cout << "    global_position_waypoint_lon: " << global_position_waypoint_lon << std::endl;
     std::cout << "    global_position_waypoint_alt_amsl: " << global_position_waypoint_alt_amsl << std::endl;
+
+    std::cout << "    camera_offset_x: " << camera_offset_x << std::endl;
+    std::cout << "    camera_offset_y: " << camera_offset_y << std::endl;
+    std::cout << "    camera_yaw: " << camera_yaw << std::endl;
 
     std::cout << "    safe_landing_enabled: " << std::boolalpha << std::to_string(safe_landing_enabled) << std::endl;
     std::cout << "    safe_landing_area_square_size: " << safe_landing_area_square_size << std::endl;
