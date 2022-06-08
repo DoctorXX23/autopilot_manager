@@ -45,6 +45,7 @@
 #include <Eigen/Dense>
 #include <ModuleBase.hpp>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 
 // ROS dependencies
@@ -52,6 +53,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/create_timer_ros.h>
 #include <tf2_ros/message_filter.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -81,6 +83,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
         return _downsampled_depth;
     }
 
+    void set_camera_static_tf(const double x, const double y, const double yaw_deg);
+
    private:
     void handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg);
     void handle_incoming_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg);
@@ -101,12 +105,15 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     int16_t _downsampline_block_size;
 
+    tf2_ros::StaticTransformBroadcaster _static_tf_broadcaster;
     tf2_ros::TransformBroadcaster _tf_broadcaster;
     tf2_ros::Buffer _tf_buffer;
     tf2_ros::TransformListener _tf_listener;
     tf2_ros::MessageFilter<sensor_msgs::msg::Image> _tf_depth_filter;
 
     message_filters::Subscriber<sensor_msgs::msg::Image> _tf_depth_subscriber;
+
+    geometry_msgs::msg::TransformStamped _camera_static_tf;
 
    protected:
     std::shared_ptr<ExtendedDownsampledImageF> _downsampled_depth;

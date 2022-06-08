@@ -43,6 +43,7 @@
 SensorManager::SensorManager()
     : Node("sensor_manager"),
       _downsampline_block_size(2),
+      _static_tf_broadcaster(this),
       _tf_broadcaster(this),
       _tf_buffer(this->get_clock()),
       _tf_listener(_tf_buffer),
@@ -111,6 +112,33 @@ bool SensorManager::set_downsampler(const sensor_msgs::msg::Image::ConstSharedPt
     }
 
     return ret;
+}
+
+void SensorManager::set_camera_static_tf(const double x, const double y, const double yaw_deg) {
+    _camera_static_tf = geometry_msgs::msg::TransformStamped{};
+
+    _camera_static_tf.transform.translation = geometry_msgs::msg::Vector3{};
+    _camera_static_tf.transform.translation.x = x;
+    _camera_static_tf.transform.translation.y = y;
+    _camera_static_tf.transform.translation.z = 0.;
+
+    tf2::Quaternion rot;
+    const double yaw_rad = yaw_deg * M_PI / 180.;
+    rot.setRPY(0., 0., yaw_rad + M_PI_2);
+    rot = rot.normalize();
+    _camera_static_tf.transform.rotation = geometry_msgs::msg::Quaternion{};
+    _camera_static_tf.transform.rotation.w = rot.w();
+    _camera_static_tf.transform.rotation.x = rot.x();
+    _camera_static_tf.transform.rotation.y = rot.y();
+    _camera_static_tf.transform.rotation.z = rot.z();
+
+    _camera_static_tf.header.stamp = this->now();
+    _camera_static_tf.header.frame_id = BASE_LINK_FRAME;
+    _camera_static_tf.child_frame_id = CAMERA_LINK_FRAME;
+
+    _static_tf_broadcaster.sendTransform(_camera_static_tf);
+
+    std::cout << sensorManagerOut << " Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw." << std::endl;
 }
 
 void SensorManager::handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg) {

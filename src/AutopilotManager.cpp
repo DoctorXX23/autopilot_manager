@@ -373,6 +373,7 @@ void AutopilotManager::start() {
 
         // Init and run the Sensor Manager
         _sensor_manager->init();
+        _sensor_manager->set_camera_static_tf(0.1, 0., 0.);
         _sensor_manager_th = std::thread(&AutopilotManager::run_sensor_manager, this);
 
         // Init and run the Collision Avoidance Manager
