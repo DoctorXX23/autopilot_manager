@@ -138,7 +138,8 @@ void SensorManager::set_camera_static_tf(const double x, const double y, const d
 
     _static_tf_broadcaster.sendTransform(_camera_static_tf);
 
-    std::cout << sensorManagerOut << " Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw." << std::endl;
+    std::cout << sensorManagerOut << " Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw."
+              << std::endl;
 }
 
 void SensorManager::handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg) {
