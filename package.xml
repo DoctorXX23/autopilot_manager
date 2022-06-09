@@ -27,8 +27,6 @@
   <depend>timing_tools</depend>
   <depend>visualization_msgs</depend>
 
-  <exec_depend>px4_ros_com</exec_depend>
-
   <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
   <build_export_depend>Eigen3</build_export_depend>
 
