@@ -50,7 +50,7 @@ LandingManager::LandingManager()
       _visualizer(std::make_shared<viz::MapVisualizer>(this)),
       _frequency_mapper("mapper"),
       _frequency_visualise_map("visualise map"),
-      _timer_timing_stats(create_wall_timer(5s, std::bind(&LandingManager::printTimingStats, this))),
+      _timer_stats(create_wall_timer(5s, std::bind(&LandingManager::printStats, this))),
       _timer_mapper({}),
       _timer_map_visualizer({}),
       _state(landing_mapper::eLandingMapperState::UNKNOWN),
@@ -260,6 +260,9 @@ void LandingManager::mapper() {
             }
             timer_pointcloud.stop();
 
+            _images_processed++;
+            _points_processed += _pointcloud_for_mapper.size();
+
             // Find plain ground
             _mapper->updateVehiclePosition(position);
             _mapper->updateVehicleOrientation(orientation);
@@ -334,12 +337,25 @@ void LandingManager::visualizeMap() {
     timer_visualise_map.stop();
 }
 
-void LandingManager::printTimingStats() const {
+void LandingManager::printStats() {
     std::stringstream ss;
+
+    // Timing stats
     timing_tools::printTimers(ss);
     timing_tools::printFrequencies(ss);
-    std::cout << std::endl << ss.str();
 
+    // Image processing stats
+    static constexpr size_t width = 10;
+    ss << "=== Image processing statistics ===" << std::endl;
+    ss << "Images processed" << std::setw(width) << _images_processed << std::endl;
+    ss << "Points processed" << std::setw(width) << _points_processed << std::endl;
+    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << std::endl;
+
+    std::cout << std::endl << ss.str() << std::endl;
+
+    // Reset
     timing_tools::resetTimingStatistics();
     timing_tools::resetFrequencyStatistics();
+    _images_processed = 0;
+    _points_processed = 0;
 }

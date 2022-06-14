@@ -123,7 +123,7 @@ class LandingManager : public rclcpp::Node, ModuleBase {
                          const rclcpp::Time& timestamp);
     void visualizeMap();
 
-    void printTimingStats() const;
+    void printStats();
 
     std::function<LandingManagerConfiguration()> _config_update_callback;
 
@@ -139,10 +139,13 @@ class LandingManager : public rclcpp::Node, ModuleBase {
 
     timing_tools::FrequencyMeter _frequency_mapper;
     timing_tools::FrequencyMeter _frequency_visualise_map;
-    rclcpp::TimerBase::SharedPtr _timer_timing_stats;
+    rclcpp::TimerBase::SharedPtr _timer_stats;
 
     rclcpp::TimerBase::SharedPtr _timer_mapper;
     rclcpp::TimerBase::SharedPtr _timer_map_visualizer;
+
+    int _images_processed = 0;
+    int _points_processed = 0;
 
     rclcpp::CallbackGroup::SharedPtr _callback_group_mapper;
     rclcpp::CallbackGroup::SharedPtr _callback_group_telemetry;
