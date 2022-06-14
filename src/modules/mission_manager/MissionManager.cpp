@@ -617,18 +617,12 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
             std::cout << status << std::endl;
         }
-    } else if (arrived_to_new_waypoint()) {
-        _landing_planner.arrivedAtWaypoint(is_stationary(), safe_landing_state);
+    } else {
+        _landing_planner.checkForWaypointArrival({_current_pos_x, _current_pos_y}, is_stationary(), safe_landing_state);
         if (_landing_planner.state() == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
             // Switched into ATTEMPTING_TO_LAND
             should_initiate_landing = true;
         }
-    } else {
-        // Didn't find a landing site AND
-        // Not attempting to land AND
-        // Not at a waypoint:
-        // --> We're flying to a waypoint (or not initialised)
-        // --> Keep going
     }
 
     /*
