@@ -42,7 +42,7 @@
 
 SensorManager::SensorManager()
     : Node("sensor_manager"),
-      _downsampline_block_size(2),
+      _downsampline_block_size(4),
       _static_tf_broadcaster(this),
       _tf_broadcaster(this),
       _tf_buffer(this->get_clock()),
@@ -53,6 +53,7 @@ SensorManager::~SensorManager() { deinit(); }
 
 void SensorManager::init() {
     std::cout << sensorManagerOut << " Started!" << std::endl;
+    std::cout << sensorManagerOut << " Downsampling block size = " << _downsampline_block_size << std::endl;
 
     bool sim;
     this->declare_parameter("sim");
