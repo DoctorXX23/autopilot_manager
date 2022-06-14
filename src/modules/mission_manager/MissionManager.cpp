@@ -497,8 +497,10 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
          *  Process any active actions
          */
         if (_landing_planner.isActive()) {
-            if (_landed_state == mavsdk::Telemetry::LandedState::OnGround) {
+            if (_landed_state == mavsdk::Telemetry::LandedState::OnGround ||
+                safe_landing_state == 2 /*eLandingMapperState::CLOSE_TO_GROUND*/) {
                 // Vehicle landed. Stop the landing site search.
+                std::cout << std::string(missionManagerOut) << "Vehicle landed or approaching ground." << std::endl;
                 _landing_planner.endSearch();
                 landing_site_search_has_ended();
             } else if (under_manual_control()) {
