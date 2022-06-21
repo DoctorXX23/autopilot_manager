@@ -43,6 +43,7 @@
 #include <Eigen/Core>
 #include <landing_mapper/EuclideanSignedDistanceFields.hpp>
 #include <landing_mapper/HeightMap.hpp>
+#include <landing_mapper/HeightMapOld.hpp>
 
 // ROS dependencies
 #include <rclcpp/duration.hpp>
@@ -90,8 +91,11 @@ class MapVisualizer {
                        bool enabled = true);
 
     template <typename T>
-    void visualizeHeightMap(const landing_mapper::HeightMap<T>& height_map, const rclcpp::Time& timestamp,
-                            bool enabled);
+    void visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp, bool enabled);
+
+    template <typename T>
+    void visualizeHeightMapOld(const landing_mapper::HeightMapOld<T>& height_map, const rclcpp::Time& timestamp,
+                               bool enabled);
 
     void prepare_point_cloud_msg(int64_t timestamp_ns, size_t width, size_t height, bool enabled = true);
 
@@ -266,7 +270,7 @@ void MapVisualizer::visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& 
 }
 
 template <typename T>
-void MapVisualizer::visualizeHeightMap(const landing_mapper::HeightMap<T>& height_map, const rclcpp::Time& timestamp,
+void MapVisualizer::visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp,
                                        bool enabled) {
     if (!enabled) {
         return;
@@ -287,6 +291,68 @@ void MapVisualizer::visualizeHeightMap(const landing_mapper::HeightMap<T>& heigh
     map_marker.header.frame_id = NED_FRAME;
     map_marker.header.stamp = timestamp;
     map_marker.ns = "height_map";
+    map_marker.id = 0;
+    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
+    map_marker.action = visualization_msgs::msg::Marker::ADD;
+    map_marker.pose.orientation.x = 0.0;
+    map_marker.pose.orientation.y = 0.0;
+    map_marker.pose.orientation.z = 0.0;
+    map_marker.pose.orientation.w = 1.0;
+    map_marker.scale.x = cell_size;
+    map_marker.scale.y = cell_size;
+    map_marker.scale.z = cell_size;
+    map_marker.color.a = 0.5;
+    map_marker.color.r = 1.0;
+    map_marker.color.g = 0.0;
+    map_marker.color.b = 0.0;
+
+    const Eigen::Matrix<T, 2, 1> map_centre = height_map.getCentrePosition();
+    const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> heights = height_map.heights();
+    const int map_size_x = heights.rows();
+    const int map_size_y = heights.cols();
+
+    for (int x = 0; x < map_size_x; x++) {
+        for (int y = 0; y < map_size_y; y++) {
+            if (heights(x, y) != std::numeric_limits<T>::max()) {
+                const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0) - 6.0,
+                                                        cell_size * (y - map_size_y * 0.5) + map_centre(1),
+                                                        heights(x, y) + cell_size * 0.5);
+                map_marker.points.push_back(toPoint(height_pos));
+
+                const float h = std::abs(std::fmod(height_pos.z(), 2.0) / 2.0) * 360;
+                std_msgs::msg::ColorRGBA color;
+                color.a = 0.5;
+                std::tie(color.r, color.g, color.b) = HSVtoRGB(std::make_tuple(h, 1.f, 1.f));
+                map_marker.colors.push_back(color);
+            }
+        }
+    }
+    marker_array.markers.push_back(map_marker);
+    marker_map_pub_->publish(marker_array);
+}
+
+template <typename T>
+void MapVisualizer::visualizeHeightMapOld(const landing_mapper::HeightMapOld<T>& height_map,
+                                          const rclcpp::Time& timestamp, bool enabled) {
+    if (!enabled) {
+        return;
+    }
+
+    visualization_msgs::msg::MarkerArray marker_array;
+
+    visualization_msgs::msg::Marker map_marker;
+    map_marker.header.frame_id = NED_FRAME;
+    map_marker.header.stamp = timestamp;
+    map_marker.ns = "height_map_old";
+    map_marker.id = 0;
+    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
+    map_marker.action = visualization_msgs::msg::Marker::DELETE;
+    marker_array.markers.push_back(map_marker);
+
+    const double cell_size = height_map.getBinEdgeWidth();
+    map_marker.header.frame_id = NED_FRAME;
+    map_marker.header.stamp = timestamp;
+    map_marker.ns = "height_map_old";
     map_marker.id = 0;
     map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
     map_marker.action = visualization_msgs::msg::Marker::ADD;
