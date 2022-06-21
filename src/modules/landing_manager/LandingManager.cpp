@@ -225,6 +225,9 @@ void LandingManager::mapper() {
             const Eigen::Vector3f position = depth_msg->position;
             const Eigen::Quaternionf orientation = depth_msg->orientation;
 
+            _mapper->updateVehiclePosition(position);
+            _mapper->updateVehicleOrientation(orientation);
+
             timing_tools::Timer timer_pointcloud("point cloud: total     ", true);
             {
                 std::lock_guard<std::mutex> lock(_map_mutex);
@@ -264,9 +267,6 @@ void LandingManager::mapper() {
             _points_processed += _pointcloud_for_mapper.size();
 
             // Find plain ground
-            _mapper->updateVehiclePosition(position);
-            _mapper->updateVehicleOrientation(orientation);
-
             timing_tools::Timer timer_check_landing_area("check landing area", true);
             Eigen::Vector3f ground_position;
             const landing_mapper::eLandingMapperState state = _mapper->checkLandingArea(ground_position);
