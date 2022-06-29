@@ -332,9 +332,7 @@ void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, 
 void LandingManager::visualizeMap() {
     _frequency_visualise_map.tic();
     timing_tools::Timer timer_visualise_map("visualise map", true);
-    _visualizer->visualizeEsdf(_mapper->getEsdf(), now(), _visualize);
     _visualizer->visualizeHeightMap(_mapper->getHeightMap(), now(), _visualize);
-    _visualizer->visualizeHeightMapOld(_mapper->getHeightMapOld(), now(), _visualize);
     timer_visualise_map.stop();
 }
 
