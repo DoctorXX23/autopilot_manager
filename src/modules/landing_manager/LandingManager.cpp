@@ -90,7 +90,7 @@ void LandingManager::updateParameters() {
     }
     if (_landing_manager_config.safe_landing_area_square_size == 0 ||
         !setSearchWindow_m(_landing_manager_config.safe_landing_area_square_size)) {
-        _mapper_parameter.window_size_m = 1.4f;
+        _mapper_parameter.window_size_m = 2.0f;
     }
 
     // std::cout << landingManagerOut << "Square size: " << __mapper_parameter.window_size_m
@@ -101,6 +101,7 @@ void LandingManager::init() {
     std::cout << landingManagerOut << " Started!" << std::endl;
 
     initParameters();
+    updateParameters();
 
     _mapper = std::make_unique<landing_mapper::LandingMapper<float>>(_mapper_parameter);
 
