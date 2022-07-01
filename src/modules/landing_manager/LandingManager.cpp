@@ -189,11 +189,10 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     if (too_many_null_images || too_many_old_timestamps) {
         if (too_many_null_images && health.count_image_null % 10 == 0) {
             std::cerr << landingManagerOut << " Input is unhealthy"
-                  << " (null images = " << health.count_image_null << ")" << std::endl;
-        }
-        else if (too_many_old_timestamps && health.count_timestamp_old % 10 == 0) {
+                      << " (null images = " << health.count_image_null << ")" << std::endl;
+        } else if (too_many_old_timestamps && health.count_timestamp_old % 10 == 0) {
             std::cerr << landingManagerOut << " Input is unhealthy:"
-                  << " (old timestamps = " << health.count_timestamp_old << ")" << std::endl;
+                      << " (old timestamps = " << health.count_timestamp_old << ")" << std::endl;
         }
         healthy = false;
     }
@@ -352,7 +351,8 @@ void LandingManager::printStats() {
     ss << "=== Image processing statistics ===" << std::endl;
     ss << "Images processed" << std::setw(width) << _images_processed << std::endl;
     ss << "Points processed" << std::setw(width) << _points_processed << std::endl;
-    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << " (" << percent_points << "%)" << std::endl;
+    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << " (" << percent_points
+       << "%)" << std::endl;
 
     std::cout << std::endl << ss.str() << std::endl;
 
