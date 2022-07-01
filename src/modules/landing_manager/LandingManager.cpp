@@ -269,6 +269,7 @@ void LandingManager::mapper() {
 
             _images_processed++;
             _points_processed += _pointcloud_for_mapper.size();
+            _points_received += intrinsics.rw * intrinsics.rh;
 
             // Find plain ground
             timing_tools::Timer timer_check_landing_area("check landing area", true);
@@ -348,10 +349,11 @@ void LandingManager::printStats() {
 
     // Image processing stats
     static constexpr size_t width = 10;
+    const int percent_points = 100. * _points_processed / _points_received;
     ss << "=== Image processing statistics ===" << std::endl;
     ss << "Images processed" << std::setw(width) << _images_processed << std::endl;
     ss << "Points processed" << std::setw(width) << _points_processed << std::endl;
-    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << std::endl;
+    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << " (" << percent_points << "%)" << std::endl;
 
     std::cout << std::endl << ss.str() << std::endl;
 
@@ -360,4 +362,5 @@ void LandingManager::printStats() {
     timing_tools::resetFrequencyStatistics();
     _images_processed = 0;
     _points_processed = 0;
+    _points_received = 0;
 }

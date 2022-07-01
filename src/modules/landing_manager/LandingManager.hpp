@@ -146,6 +146,7 @@ class LandingManager : public rclcpp::Node, ModuleBase {
 
     int _images_processed = 0;
     int _points_processed = 0;
+    int _points_received = 0;
 
     rclcpp::CallbackGroup::SharedPtr _callback_group_mapper;
     rclcpp::CallbackGroup::SharedPtr _callback_group_telemetry;
