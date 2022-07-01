@@ -245,8 +245,7 @@ void LandingManager::mapper() {
                 for (const DepthPixelF& depth_pixel : depth_pixel_array) {
                     const float depth = depth_pixel.depth;
 
-                    if (std::isfinite(depth) && (depth > 0.3f) &&
-                        (depth < 7.5f)) {  // TODO make 0.3 and 20.f parameter again
+                    if (std::isfinite(depth) && (depth > 0.3f) && (depth < 16.f)) {
                         Eigen::Matrix<float, 3, 1> point(0.0, 0.0, depth);
                         point.head<2>() = (Eigen::Matrix<float, 2, 1>(depth_pixel.x, depth_pixel.y) - principal_point)
                                               .cwiseProduct(inverse_focal_length) *
