@@ -186,12 +186,15 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     const bool too_many_null_images = health.count_image_null > MAX_NULL_IMAGE;
     const bool too_many_old_timestamps = health.count_timestamp_old > MAX_OLD_TIMESTAMP;
 
-    // std::cout << "images: " << health.count_image_null << " time: " << health.count_timestamp_old << std::endl;
-
     if (too_many_null_images || too_many_old_timestamps) {
-        std::cerr << landingManagerOut << " Input is unhealthy"
-                  << " count_image_null=" << health.count_image_null
-                  << " count_timestamp_old=" << health.count_timestamp_old << std::endl;
+        if (too_many_null_images && health.count_image_null % 10 == 0) {
+            std::cerr << landingManagerOut << " Input is unhealthy"
+                  << " (null images = " << health.count_image_null << ")" << std::endl;
+        }
+        else if (too_many_old_timestamps && health.count_timestamp_old % 10 == 0) {
+            std::cerr << landingManagerOut << " Input is unhealthy:"
+                  << " (old timestamps = " << health.count_timestamp_old << ")" << std::endl;
+        }
         healthy = false;
     }
 
@@ -290,10 +293,9 @@ void LandingManager::mapper() {
             // std::cout << landingManagerOut << " height " << ground_position.z() - local_state.position.z() <<
             // std::endl;
 
-        } else if (!healthCheck(depth_msg)) {
+        } else if (!is_landing_mapper_healthy) {
             std::lock_guard<std::mutex> lock(_landing_manager_mutex);
             _state = landing_mapper::eLandingMapperState::UNHEALTHY;
-
         } else {
             std::lock_guard<std::mutex> lock(_landing_manager_mutex);
             if (_state != landing_mapper::eLandingMapperState::CLOSE_TO_GROUND) {
