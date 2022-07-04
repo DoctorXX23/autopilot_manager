@@ -41,9 +41,7 @@
 #include <common.h>
 
 #include <Eigen/Core>
-#include <landing_mapper/EuclideanSignedDistanceFields.hpp>
 #include <landing_mapper/HeightMap.hpp>
-#include <landing_mapper/HeightMapOld.hpp>
 
 // ROS dependencies
 #include <rclcpp/duration.hpp>
@@ -87,15 +85,7 @@ class MapVisualizer {
                        bool enabled) const;
 
     template <typename T>
-    void visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& esdf, const rclcpp::Time& timestamp,
-                       bool enabled = true);
-
-    template <typename T>
     void visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp, bool enabled);
-
-    template <typename T>
-    void visualizeHeightMapOld(const landing_mapper::HeightMapOld<T>& height_map, const rclcpp::Time& timestamp,
-                               bool enabled);
 
     void prepare_point_cloud_msg(int64_t timestamp_ns, size_t width, size_t height, bool enabled = true);
 
@@ -191,85 +181,6 @@ void MapVisualizer::publishGround(const Eigen::MatrixBase<Derived>& point, const
 }
 
 template <typename T>
-void MapVisualizer::visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& esdf, const rclcpp::Time& timestamp,
-                                  bool enabled) {
-    if (!enabled) {
-        return;
-    }
-
-    visualization_msgs::msg::MarkerArray marker_array;
-
-    visualization_msgs::msg::Marker map_marker;
-    map_marker.header.frame_id = NED_FRAME;
-    map_marker.header.stamp = timestamp;
-    map_marker.ns = "esdf";
-    map_marker.id = 0;
-    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
-    map_marker.action = visualization_msgs::msg::Marker::DELETE;
-    marker_array.markers.push_back(map_marker);
-
-    const esdfvoxelcube::ESDFVoxelCube esdf_map = esdf.getEsdfMap();
-    const double cell_size = esdf_map.getBinEdgeWidth();
-    map_marker.header.frame_id = NED_FRAME;
-    map_marker.header.stamp = timestamp;
-    map_marker.ns = "esdf";
-    map_marker.id = 0;
-    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
-    map_marker.action = visualization_msgs::msg::Marker::ADD;
-    map_marker.pose.orientation.x = 0.0;
-    map_marker.pose.orientation.y = 0.0;
-    map_marker.pose.orientation.z = 0.0;
-    map_marker.pose.orientation.w = 1.0;
-    map_marker.scale.x = cell_size;
-    map_marker.scale.y = cell_size;
-    map_marker.scale.z = cell_size;
-    map_marker.color.a = 0.5;
-    map_marker.color.r = 1.0;
-    map_marker.color.g = 0.0;
-    map_marker.color.b = 0.0;
-
-    const Eigen::Vector3i grid_min = esdf_map.getLowerBoundaryIndices().array();
-    const Eigen::Vector3i grid_max = esdf_map.getUpperBoundaryIndices().array();
-
-    // From previous implementation
-    // constexpr float distance_max_value = 20.f;
-    // constexpr float distance_min_value = -1.f;
-    // constexpr float range_max = 320.f;
-    // constexpr float range_min = 0.f;
-
-    // for (int k = grid_min[2]; k < grid_max[2]; ++k) {
-    for (int k = grid_max[2]; k > grid_min[2]; --k) {
-        for (int i = grid_min[0]; i < grid_max[0]; ++i) {
-            for (int j = grid_min[1]; j < grid_max[1]; ++j) {
-                const Eigen::Vector3i index(i, j, k);
-                const esdfvoxelcube::ESDFNode<T>& voxel = esdf_map.getNode(index);
-                if (voxel.is_observed && voxel.distance < cell_size) {
-                    const Eigen::Matrix<T, 3, 1> voxel_center_pos = esdf_map.getNodeCenter(index);
-                    map_marker.points.push_back(toPoint(voxel_center_pos));
-
-                    // const float h = ((range_max - range_min) * (voxel.distance - distance_min_value) /
-                    //                 (distance_max_value - distance_min_value)) +
-                    //                 range_min;
-                    // MA: not entirely sure what this normalization is meant for. Probably not
-                    // necessary anymore since we're only displaying voxels that have small
-                    // distances. Hence, color by height for now and wrap around every 25m.
-
-                    // TODO make the 25m / 2.0 a parameter somehow. Either dynamic or by ROS parameters
-                    const float h = std::abs(std::fmod(voxel_center_pos.z(), 2.0) / 2.0) * 360;
-
-                    std_msgs::msg::ColorRGBA color;
-                    color.a = 0.5;
-                    std::tie(color.r, color.g, color.b) = HSVtoRGB(std::make_tuple(h, 1.f, 1.f));
-                    map_marker.colors.push_back(color);
-                }
-            }
-        }
-    }
-    marker_array.markers.push_back(map_marker);
-    marker_map_pub_->publish(marker_array);
-}
-
-template <typename T>
 void MapVisualizer::visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp,
                                        bool enabled) {
     if (!enabled) {
@@ -317,68 +228,6 @@ void MapVisualizer::visualizeHeightMap(const height_map::HeightMap<T>& height_ma
                 const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0) - 6.0,
                                                         cell_size * (y - map_size_y * 0.5) + map_centre(1),
                                                         heights(x, y) + cell_size * 0.5);
-                map_marker.points.push_back(toPoint(height_pos));
-
-                const float h = std::abs(std::fmod(height_pos.z(), 2.0) / 2.0) * 360;
-                std_msgs::msg::ColorRGBA color;
-                color.a = 0.5;
-                std::tie(color.r, color.g, color.b) = HSVtoRGB(std::make_tuple(h, 1.f, 1.f));
-                map_marker.colors.push_back(color);
-            }
-        }
-    }
-    marker_array.markers.push_back(map_marker);
-    marker_map_pub_->publish(marker_array);
-}
-
-template <typename T>
-void MapVisualizer::visualizeHeightMapOld(const landing_mapper::HeightMapOld<T>& height_map,
-                                          const rclcpp::Time& timestamp, bool enabled) {
-    if (!enabled) {
-        return;
-    }
-
-    visualization_msgs::msg::MarkerArray marker_array;
-
-    visualization_msgs::msg::Marker map_marker;
-    map_marker.header.frame_id = NED_FRAME;
-    map_marker.header.stamp = timestamp;
-    map_marker.ns = "height_map_old";
-    map_marker.id = 0;
-    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
-    map_marker.action = visualization_msgs::msg::Marker::DELETE;
-    marker_array.markers.push_back(map_marker);
-
-    const double cell_size = height_map.getBinEdgeWidth();
-    map_marker.header.frame_id = NED_FRAME;
-    map_marker.header.stamp = timestamp;
-    map_marker.ns = "height_map_old";
-    map_marker.id = 0;
-    map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
-    map_marker.action = visualization_msgs::msg::Marker::ADD;
-    map_marker.pose.orientation.x = 0.0;
-    map_marker.pose.orientation.y = 0.0;
-    map_marker.pose.orientation.z = 0.0;
-    map_marker.pose.orientation.w = 1.0;
-    map_marker.scale.x = cell_size;
-    map_marker.scale.y = cell_size;
-    map_marker.scale.z = cell_size;
-    map_marker.color.a = 0.5;
-    map_marker.color.r = 1.0;
-    map_marker.color.g = 0.0;
-    map_marker.color.b = 0.0;
-
-    const Eigen::Matrix<T, 2, 1> map_centre = height_map.getCentrePosition();
-    const Eigen::MatrixXi height_indices = height_map.height_indexes();
-    const int map_size_x = height_indices.rows();
-    const int map_size_y = height_indices.cols();
-
-    for (int x = 0; x < map_size_x; x++) {
-        for (int y = 0; y < map_size_y; y++) {
-            if (height_indices(x, y) != std::numeric_limits<int>::max()) {
-                const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0),
-                                                        cell_size * (y - map_size_y * 0.5) + map_centre(1),
-                                                        cell_size * height_indices(x, y));
                 map_marker.points.push_back(toPoint(height_pos));
 
                 const float h = std::abs(std::fmod(height_pos.z(), 2.0) / 2.0) * 360;
