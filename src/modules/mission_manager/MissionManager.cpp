@@ -371,10 +371,16 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                             if (_landing_planner.isActive()) {
                                 // Lower the maximum speed
-                                _action->set_maximum_speed(landing_site_search_max_speed);
-                                std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
-                                          << _original_max_speed << " to " << landing_site_search_max_speed
-                                          << std::endl;
+                                mavsdk::Action::Result result =
+                                    _action->set_maximum_speed(landing_site_search_max_speed);
+                                if (result == mavsdk::Action::Result::Success) {
+                                    std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
+                                              << _original_max_speed << " to " << landing_site_search_max_speed
+                                              << std::endl;
+                                } else {
+                                    std::cout << std::string(missionManagerOut)
+                                              << "Could not lower maximum speed for landing site search." << std::endl;
+                                }
 
                                 // Set the first waypoint in the search pattern
                                 go_to_new_local_waypoint(_landing_planner.getCurrentWaypoint(),
@@ -674,8 +680,15 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
 }
 
 void MissionManager::landing_site_search_has_ended() {
-    _action->set_maximum_speed(_original_max_speed);
-    std::cout << std::string(missionManagerOut) << "Restoring speed to " << _original_max_speed << std::endl;
+    mavsdk::Action::Result result = _action->set_maximum_speed(_original_max_speed);
+    if (result == mavsdk::Action::Result::Success) {
+        std::cout << std::string(missionManagerOut) << "Restoring maximum speed to " << _original_max_speed
+                  << std::endl;
+    } else {
+        std::cout << std::string(missionManagerOut) << "Could not restore maximum speed after landing site search."
+                  << std::endl;
+    }
+
     _action_triggered = false;
     std::cout << "    *" << std::endl
               << "  ***" << std::endl
