@@ -347,12 +347,18 @@ void LandingManager::printStats() {
 
     // Image processing stats
     static constexpr size_t width = 10;
-    const int percent_points = 100. * _points_processed / _points_received;
+    float points_per_image = 0.;
+    if (_images_processed) {
+        points_per_image = 1. * _points_processed / _images_processed;
+    }
+    int percent_points = 0.;
+    if (_points_received) {
+        percent_points = 100. * _points_processed / _points_received;
+    }
     ss << "=== Image processing statistics ===" << std::endl;
     ss << "Images processed" << std::setw(width) << _images_processed << std::endl;
     ss << "Points processed" << std::setw(width) << _points_processed << std::endl;
-    ss << "Points / image  " << std::setw(width) << 1. * _points_processed / _images_processed << " (" << percent_points
-       << "%)" << std::endl;
+    ss << "Points / image  " << std::setw(width) << points_per_image << " (" << percent_points << "%)" << std::endl;
 
     std::cout << std::endl << ss.str() << std::endl;
 
