@@ -142,7 +142,8 @@ class MissionManager : public ModuleBase {
     void handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now);
     void handle_simple_collision_avoidance(std::chrono::time_point<std::chrono::system_clock> now);
 
-    void update_landing_site_search(const uint8_t safe_landing_state, const bool land_when_found_site);
+    void update_landing_site_search(const uint8_t safe_landing_state, const float height_above_obstacle,
+                                    const bool land_when_found_site);
     void landing_site_search_has_ended();
 
     void set_global_position_reference();
