@@ -289,6 +289,9 @@ bool AutopilotManagerConfig::InitFromFile(const std::string& config_path) {
             if (line.find("landing_site_search_min_distance_after_abort") != std::string::npos) {
                 landing_site_search_min_distance_after_abort = std::stod(sin.str());
             }
+            if (line.find("landing_site_search_arrival_radius") != std::string::npos) {
+                landing_site_search_arrival_radius = std::stod(sin.str());
+            }
             if (line.find("landing_site_search_strategy") != std::string::npos) {
                 landing_site_search_strategy = sin.str();
             }
@@ -353,6 +356,7 @@ void AutopilotManagerConfig::Print() const {
     std::cout << "    landing_site_search_max_distance: " << landing_site_search_max_distance << std::endl;
     std::cout << "    landing_site_search_min_distance_after_abort: " << landing_site_search_min_distance_after_abort
               << std::endl;
+    std::cout << "    landing_site_search_arrival_radius: " << landing_site_search_arrival_radius << std::endl;
     std::cout << "    landing_site_search_strategy: " << landing_site_search_strategy << std::endl;
 
     std::cout << "    landing_site_search_spiral_spacing: " << landing_site_search_spiral_spacing << std::endl;

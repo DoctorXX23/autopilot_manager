@@ -83,6 +83,7 @@ class AutopilotManager {
     double _landing_site_search_max_speed = 0.0;
     double _landing_site_search_max_distance = 0.0;
     double _landing_site_search_min_distance_after_abort = 0.0;
+    double _landing_site_search_arrival_radius = 0.0;
     std::string _landing_site_search_strategy = "";
 
     // Spiral search strategy configuration
