@@ -225,7 +225,7 @@ void MapVisualizer::visualizeHeightMap(const height_map::HeightMap<T>& height_ma
     for (int x = 0; x < map_size_x; x++) {
         for (int y = 0; y < map_size_y; y++) {
             if (heights(x, y) != std::numeric_limits<T>::max()) {
-                const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0) - 6.0,
+                const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0),
                                                         cell_size * (y - map_size_y * 0.5) + map_centre(1),
                                                         heights(x, y) + cell_size * 0.5);
                 map_marker.points.push_back(toPoint(height_pos));
