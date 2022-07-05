@@ -383,13 +383,17 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                 }
 
                                 // Set the first waypoint in the search pattern
-                                go_to_new_local_waypoint(_landing_planner.getCurrentWaypoint(),
-                                                         _landing_planner.getSearchAltitude(),
+                                const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
+                                    _landing_planner.getCurrentWaypoint();
+                                go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
                                                          _current_yaw * 180. / M_PI);
-                                status = std::string(missionManagerOut) + "Landing site search started at: Latitude " +
-                                         std::to_string(_new_latitude) + " deg, Longitude " +
-                                         std::to_string(_new_longitude) + " deg, Altitude (AMSL) " +
-                                         std::to_string(_new_altitude_amsl) + " meters";
+
+                                std::stringstream ss;
+                                ss << missionManagerOut << "Landing site search started at: Lat " << std::fixed
+                                   << std::setprecision(6) << _new_latitude << "°, Lon " << _new_longitude << "°, Alt "
+                                   << std::setprecision(2) << _new_altitude_amsl << "m AMSL, Local (" << new_wpt.north_m
+                                   << ", " << new_wpt.east_m << ")" << std::endl;
+                                status = ss.str();
                                 _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                             } else {
                                 // Planner did not start correctly.
@@ -659,11 +663,14 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
     } else if (_landing_planner.waypointUpdated()) {
         // Command new waypoint
-        go_to_new_local_waypoint(_landing_planner.getCurrentWaypoint(), _landing_planner.getSearchAltitude(),
-                                 _current_yaw * 180. / M_PI);
-        status += "[Landing Site Search] Waypoint set: Latitude " + std::to_string(_new_latitude) + " deg, " +
-                  "Longitude " + std::to_string(_new_longitude) + " deg, Altitude (AMSL) " +
-                  std::to_string(_new_altitude_amsl) + " meters";
+        const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
+            _landing_planner.getCurrentWaypoint();
+        go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(), _current_yaw * 180. / M_PI);
+        std::stringstream ss;
+        ss << "[Landing Site Search] Waypoint set: Lat " << std::fixed << std::setprecision(6) << _new_latitude
+           << "°, Lon " << _new_longitude << "°, Alt " << std::setprecision(2) << _new_altitude_amsl
+           << "m AMSL, Local (" << new_wpt.north_m << ", " << new_wpt.east_m << ")";
+        status += ss.str();
         // _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
     } else {
         // No change in behaviour
