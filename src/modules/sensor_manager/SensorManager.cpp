@@ -40,8 +40,9 @@
 #include <SensorManager.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
-SensorManager::SensorManager()
+SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
     : Node("sensor_manager"),
+      _mavsdk_system{std::move(mavsdk_system)},
       _downsampline_block_size(4),
       _static_tf_broadcaster(this),
       _tf_broadcaster(this),
@@ -65,20 +66,17 @@ void SensorManager::init() {
     auto rmw_qos_profile = qos.get_rmw_qos_profile();
 
     // Camera topic name changes for sim
-    std::string vehicle_odometry_topic{"/fmu/out/VehicleOdometry"};
     std::string depth_topic{"/camera/depth/image_rect_raw"};
     std::string depth_camera_info_topic{"/camera/depth/camera_info"};
     if (sim) {
         depth_topic = "/camera/depth/image_raw";
     }
 
+    _telemetry = std::make_shared<mavsdk::Telemetry>(_mavsdk_system);
+
     _depth_img_camera_info_sub = this->create_subscription<sensor_msgs::msg::CameraInfo>(
         depth_camera_info_topic, qos,
         [this](const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) { handle_incoming_camera_info(msg); });
-
-    _vehicle_odometry_sub = this->create_subscription<px4_msgs::msg::VehicleOdometry>(
-        vehicle_odometry_topic, qos,
-        [this](const px4_msgs::msg::VehicleOdometry::ConstSharedPtr msg) { handle_incoming_vehicle_odometry(msg); });
 
     _tf_depth_subscriber.subscribe(this, depth_topic, rmw_qos_profile);
     auto timer_interface =
@@ -89,12 +87,35 @@ void SensorManager::init() {
     _tf_depth_filter.setTolerance(rclcpp::Duration(0, static_cast<int>(10 * 1E6)));
 }
 
-auto SensorManager::deinit() -> void {
-    _depth_img_camera_info_sub.reset();
-    _vehicle_odometry_sub.reset();
-}
+auto SensorManager::deinit() -> void { _depth_img_camera_info_sub.reset(); }
 
-auto SensorManager::run() -> void { rclcpp::spin(shared_from_this()); }
+auto SensorManager::run() -> void {
+    // Subscribe to odometry for publishing the TF
+    _telemetry->subscribe_odometry([this](mavsdk::Telemetry::Odometry odometry) {
+        geometry_msgs::msg::TransformStamped tMsg{};
+
+        tMsg.transform.translation = geometry_msgs::msg::Vector3{};
+        tMsg.transform.translation.x = odometry.position_body.x_m;
+        tMsg.transform.translation.y = odometry.position_body.y_m;
+        tMsg.transform.translation.z = odometry.position_body.z_m;
+
+        tMsg.transform.rotation = geometry_msgs::msg::Quaternion{};
+        tMsg.transform.rotation.w = odometry.q.w;
+        tMsg.transform.rotation.x = odometry.q.x;
+        tMsg.transform.rotation.y = odometry.q.y;
+        tMsg.transform.rotation.z = odometry.q.z;
+
+        // tMsg.header.stamp.sec = msg->timestamp / 1000000;
+        // tMsg.header.stamp.nanosec = (msg->timestamp - tMsg.header.stamp.sec * 1000000) * 1000;
+        tMsg.header.stamp = this->now();
+        tMsg.header.frame_id = NED_FRAME;
+        tMsg.child_frame_id = BASE_LINK_FRAME;
+
+        _tf_broadcaster.sendTransform(tMsg);
+    });
+
+    rclcpp::spin(shared_from_this());
+}
 
 bool SensorManager::set_downsampler(const sensor_msgs::msg::Image::ConstSharedPtr& msg) {
     bool ret = true;
@@ -141,31 +162,6 @@ void SensorManager::set_camera_static_tf(const double x, const double y, const d
 
     std::cout << sensorManagerOut << " Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw."
               << std::endl;
-}
-
-void SensorManager::handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg) {
-    const auto position = Eigen::Matrix<float, 3, 1>(msg->x, msg->y, msg->z);
-    const auto orientation = Eigen::Quaternion<float>(msg->q[0], msg->q[1], msg->q[2], msg->q[3]);
-
-    geometry_msgs::msg::TransformStamped tMsg{};
-
-    tMsg.transform.translation = geometry_msgs::msg::Vector3{};
-    tMsg.transform.translation.x = position.x();
-    tMsg.transform.translation.y = position.y();
-    tMsg.transform.translation.z = position.z();
-
-    tMsg.transform.rotation = geometry_msgs::msg::Quaternion{};
-    tMsg.transform.rotation.w = orientation.w();
-    tMsg.transform.rotation.x = orientation.x();
-    tMsg.transform.rotation.y = orientation.y();
-    tMsg.transform.rotation.z = orientation.z();
-
-    tMsg.header.stamp.sec = msg->timestamp / 1000000;
-    tMsg.header.stamp.nanosec = (msg->timestamp - tMsg.header.stamp.sec * 1000000) * 1000;
-    tMsg.header.frame_id = NED_FRAME;
-    tMsg.child_frame_id = BASE_LINK_FRAME;
-
-    _tf_broadcaster.sendTransform(tMsg);
 }
 
 void SensorManager::handle_incoming_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg) {

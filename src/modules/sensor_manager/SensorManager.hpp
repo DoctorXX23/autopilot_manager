@@ -57,18 +57,21 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <px4_msgs/msg/vehicle_odometry.hpp>
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
+// MAVSDK dependencies
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/telemetry/telemetry.h>
+
 inline static constexpr auto sensorManagerOut = "[Sensor  Manager]";
 
 class SensorManager : public rclcpp::Node, ModuleBase {
    public:
-    SensorManager();
+    SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system);
     ~SensorManager();
     SensorManager(const SensorManager&) = delete;
     auto operator=(const SensorManager&) -> const SensorManager& = delete;
@@ -86,7 +89,6 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     void set_camera_static_tf(const double x, const double y, const double yaw_deg);
 
    private:
-    void handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg);
     void handle_incoming_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg);
     void handle_incoming_depth_image(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
@@ -94,8 +96,10 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     mutable std::mutex _sensor_manager_mutex;
 
-    rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr _vehicle_odometry_sub;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _depth_img_camera_info_sub;
+
+    std::shared_ptr<mavsdk::System> _mavsdk_system;
+    std::shared_ptr<mavsdk::Telemetry> _telemetry;
 
     std::shared_ptr<ImageDownsamplerInterface> _imageDownsampler;
 

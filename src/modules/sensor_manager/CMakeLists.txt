@@ -10,6 +10,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(MAVSDK REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -42,6 +43,8 @@ target_include_directories(sensor-manager PUBLIC
   ${image_downsampler_INCLUDE_DIRS}
 )
 target_link_libraries(sensor-manager
+  MAVSDK::mavsdk_telemetry
+  MAVSDK::mavsdk
   Eigen3::Eigen
   ${rclcpp_LIBRARIES}
   ${px4_msgs_LIBRARIES}

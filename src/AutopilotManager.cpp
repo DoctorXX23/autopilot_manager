@@ -281,7 +281,7 @@ void AutopilotManager::start() {
         const auto system = fut.get();
 
         // Create the Sensor Manager
-        _sensor_manager = std::make_shared<SensorManager>();
+        _sensor_manager = std::make_shared<SensorManager>(system);
 
         // Create the Collision Avoidance Manager
         _collision_avoidance_manager = std::make_shared<CollisionAvoidanceManager>();
