@@ -276,7 +276,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
         if (!_action_triggered) {
             std::string status{};
 
-            if (_landed_state == mavsdk::Telemetry::LandedState::Landing) {
+            if (_flight_mode == mavsdk::Telemetry::FlightMode::Land) { // TODO: also consider RTL, but with an override for failsafe mode(s)
                 if (height_above_obstacle > 1.5 && safe_landing_state == 0 /*eLandingMapperState::UNHEALTHY*/) {
                     // If the safe landing status is unhealthy, then hold position.
                     _action->hold();
