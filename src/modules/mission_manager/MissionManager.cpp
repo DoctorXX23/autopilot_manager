@@ -525,6 +525,11 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                           << " mode). Cancelling safe landing." << std::endl;
                 _landing_planner.endSearch();
                 landing_site_search_has_ended();
+            } else if (_flight_mode == mavsdk::Telemetry::FlightMode::ReturnToLaunch) {
+                // Mode switched to RTL. Stop the search.
+                std::cout << std::string(missionManagerOut) << "RTL triggered. Cancelling safe landing." << std::endl;
+                _landing_planner.endSearch();
+                landing_site_search_has_ended();
             } else {
                 update_landing_site_search(safe_landing_state, height_above_obstacle,
                                            safe_landing_try_landing_after_action);
