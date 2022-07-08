@@ -73,6 +73,7 @@ void SensorManager::init() {
     }
 
     _telemetry = std::make_shared<mavsdk::Telemetry>(_mavsdk_system);
+    _server_utility = std::make_shared<mavsdk::ServerUtility>(_mavsdk_system);
 
     _depth_img_camera_info_sub = this->create_subscription<sensor_msgs::msg::CameraInfo>(
         depth_camera_info_topic, qos,

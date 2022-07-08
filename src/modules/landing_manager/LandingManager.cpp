@@ -43,8 +43,9 @@
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-LandingManager::LandingManager()
+LandingManager::LandingManager(std::shared_ptr<mavsdk::System> mavsdk_system)
     : Node("landing_manager"),
+      _mavsdk_system{std::move(mavsdk_system)},
       _config_update_callback([]() { return LandingManagerConfiguration{}; }),
       _visualize(true),
       _visualizer(std::make_shared<viz::MapVisualizer>(this)),
@@ -54,7 +55,9 @@ LandingManager::LandingManager()
       _timer_mapper({}),
       _timer_map_visualizer({}),
       _state(landing_mapper::eLandingMapperState::UNKNOWN),
-      _height_above_obstacle{0.f} {}
+      _height_above_obstacle{0.f} {
+    _server_utility = std::make_shared<mavsdk::ServerUtility>(_mavsdk_system);
+}
 
 LandingManager::~LandingManager() { deinit(); }
 

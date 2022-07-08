@@ -289,7 +289,7 @@ void AutopilotManager::start() {
         _collision_avoidance_manager = std::make_shared<CollisionAvoidanceManager>();
 
         // Create the Landing Manager
-        _landing_manager = std::make_shared<LandingManager>();
+        _landing_manager = std::make_shared<LandingManager>(system);
 
         // Create Mission Manager
         _mission_manager = std::make_shared<MissionManager>(system, _custom_action_config_path);

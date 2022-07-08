@@ -57,6 +57,11 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 
+
+// MAVSDK dependencies
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/server_utility/server_utility.h>
+
 struct VehicleState {
     bool valid{false};
     Eigen::Vector3f position{NAN, NAN, NAN}, velocity{NAN, NAN, NAN}, acceleration{NAN, NAN, NAN};
@@ -68,7 +73,7 @@ static constexpr auto landingManagerOut = "[Landing Manager]";
 
 class LandingManager : public rclcpp::Node, ModuleBase {
    public:
-    LandingManager();
+    LandingManager(std::shared_ptr<mavsdk::System> mavsdk_system);
     ~LandingManager();
     LandingManager(const LandingManager&) = delete;
     auto operator=(const LandingManager&) -> const LandingManager& = delete;
@@ -126,6 +131,9 @@ class LandingManager : public rclcpp::Node, ModuleBase {
     void printStats();
 
     std::function<LandingManagerConfiguration()> _config_update_callback;
+
+    std::shared_ptr<mavsdk::System> _mavsdk_system;
+    std::shared_ptr<mavsdk::ServerUtility> _server_utility;
 
     std::unique_ptr<landing_mapper::LandingMapper<float>> _mapper;
     landing_mapper::LandingMapperParameter _mapper_parameter;

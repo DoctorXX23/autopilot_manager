@@ -14,6 +14,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 find_package(PythonInterp 3 REQUIRED)
+find_package(MAVSDK REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(image_downsampler REQUIRED)
@@ -46,6 +47,8 @@ target_include_directories(landing-manager PUBLIC
   ${landing_mapper_INCLUDE_DIRS}
 )
 target_link_libraries(landing-manager
+  MAVSDK::mavsdk_server_utility
+  MAVSDK::mavsdk
   Eigen3::Eigen
   landing_mapper
   ${rclcpp_LIBRARIES}

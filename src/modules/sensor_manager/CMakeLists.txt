@@ -41,6 +41,7 @@ target_include_directories(sensor-manager PUBLIC
   ${image_downsampler_INCLUDE_DIRS}
 )
 target_link_libraries(sensor-manager
+  MAVSDK::mavsdk_server_utility
   MAVSDK::mavsdk_telemetry
   MAVSDK::mavsdk
   Eigen3::Eigen

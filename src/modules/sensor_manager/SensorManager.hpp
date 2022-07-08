@@ -66,6 +66,7 @@
 // MAVSDK dependencies
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
+#include <mavsdk/plugins/server_utility/server_utility.h>
 
 inline static constexpr auto sensorManagerOut = "[Sensor  Manager]";
 
@@ -100,6 +101,7 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
+    std::shared_ptr<mavsdk::ServerUtility> _server_utility;
 
     std::shared_ptr<ImageDownsamplerInterface> _imageDownsampler;
 
