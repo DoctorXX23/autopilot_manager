@@ -718,6 +718,10 @@ void MissionManager::landing_site_search_has_ended() {
               << "***** Landing Site Search has ended" << std::endl
               << "  ***" << std::endl
               << "    *" << std::endl;
+
+    if ( _server_utility ) {
+        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, "Landing Site Search has ended");
+    }
 }
 
 void MissionManager::decision_maker_run() {
