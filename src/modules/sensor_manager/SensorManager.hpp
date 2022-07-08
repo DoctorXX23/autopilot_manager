@@ -95,6 +95,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     bool set_downsampler(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
+    void health_check();
+
     mutable std::mutex _sensor_manager_mutex;
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _depth_img_camera_info_sub;
@@ -120,6 +122,12 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     message_filters::Subscriber<sensor_msgs::msg::Image> _tf_depth_subscriber;
 
     geometry_msgs::msg::TransformStamped _camera_static_tf;
+
+    rclcpp::TimerBase::SharedPtr _timer_status_task;
+
+    rclcpp::Time _time_start;
+    rclcpp::Time _time_last_odometry;
+    rclcpp::Time _time_last_image;
 
    protected:
     std::shared_ptr<ExtendedDownsampledImageF> _downsampled_depth;

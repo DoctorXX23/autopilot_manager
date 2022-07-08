@@ -40,6 +40,8 @@
 #include <SensorManager.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
+using namespace std::chrono_literals;
+
 SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
     : Node("sensor_manager"),
       _mavsdk_system{std::move(mavsdk_system)},
@@ -48,7 +50,10 @@ SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
       _tf_broadcaster(this),
       _tf_buffer(this->get_clock()),
       _tf_listener(_tf_buffer),
-      _tf_depth_filter(_tf_buffer, NED_FRAME, 10, this->create_sub_node("tf_filter")) {}
+      _tf_depth_filter(_tf_buffer, NED_FRAME, 10, this->create_sub_node("tf_filter")),
+      _time_start{this->now()},
+      _time_last_odometry{this->now()},
+      _time_last_image{this->now()} {}
 
 SensorManager::~SensorManager() { deinit(); }
 
@@ -113,7 +118,11 @@ auto SensorManager::run() -> void {
         tMsg.child_frame_id = BASE_LINK_FRAME;
 
         _tf_broadcaster.sendTransform(tMsg);
+
+        _time_last_odometry = this->now();
     });
+
+    _timer_status_task = create_wall_timer(100ms, std::bind(&SensorManager::health_check, this));
 
     rclcpp::spin(shared_from_this());
 }
@@ -218,4 +227,46 @@ void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::C
     // Make the downsampled depth data available for other modules
     std::lock_guard<std::mutex> lock(_sensor_manager_mutex);
     _downsampled_depth = downsampled_depth_image;
+
+    _time_last_image = this->now();
+}
+
+void SensorManager::health_check() {
+    const auto now = this->now();
+
+    const auto s_since_start = (now - _time_start).seconds();
+
+    if ( s_since_start < 5.0 ) {
+        return;
+    }
+
+    const auto s_since_last_odom = (now - _time_last_odometry).seconds();
+    const auto s_since_last_image = (now - _time_last_image).seconds();
+
+    const bool is_odom_healthy = s_since_last_odom < std::chrono::duration<double>(200ms).count();
+    const bool is_image_healthy = s_since_last_image < std::chrono::duration<double>(400ms).count();
+    const bool is_healthy = is_odom_healthy && is_image_healthy;
+
+    const rclcpp::Duration warning_interval(2, 0);
+    static rclcpp::Time last_warning = now;
+    const bool is_exceeded = this->now() > (last_warning + warning_interval);
+
+
+    if (!is_healthy && is_exceeded) {
+        last_warning = now;
+
+        std::stringstream ss;
+        ss << "Input unhealthy.";
+        if (!is_odom_healthy) {
+            ss << " - Odometry unhealthy.";
+        }
+        if (!is_image_healthy) {
+            ss << " - Images unhealthy.";
+        }
+
+        RCLCPP_ERROR(get_logger(), ss.str());
+        if ( _server_utility ) {
+            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
+        }
+    }
 }
