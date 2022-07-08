@@ -162,6 +162,8 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     static constexpr int16_t MAX_NULL_IMAGE = 5;
     static constexpr int16_t MAX_OLD_TIMESTAMP = 50;
 
+    const auto now = this->now();
+
     bool healthy{true};
 
     struct HealthHandly {
@@ -190,14 +192,29 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     const bool too_many_old_timestamps = health.count_timestamp_old > MAX_OLD_TIMESTAMP;
 
     if (too_many_null_images || too_many_old_timestamps) {
-        if (too_many_null_images && health.count_image_null % 10 == 0) {
-            std::cerr << landingManagerOut << " Input is unhealthy"
-                      << " (null images = " << health.count_image_null << ")" << std::endl;
-        } else if (too_many_old_timestamps && health.count_timestamp_old % 10 == 0) {
-            std::cerr << landingManagerOut << " Input is unhealthy:"
-                      << " (old timestamps = " << health.count_timestamp_old << ")" << std::endl;
+        const rclcpp::Duration warning_interval(2, 0);
+        static rclcpp::Time last_warning = this->now();
+        const bool is_exceeded = now > (last_warning + warning_interval);
+
+        if (is_exceeded) {
+            std::stringstream ss;
+            ss << "Input is unhealthy";
+            if (too_many_null_images) {
+                ss << " - NULL-images (" << health.count_image_null << ")";
+            }
+            if (too_many_old_timestamps) {
+                ss << " - Old timestamps (" << health.count_timestamp_old << ")";
+            }
+            healthy = false;
+
+            RCLCPP_ERROR(get_logger(), ss.str());
+            if ( _server_utility ) {
+                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
+            }
+
+            last_warning = now;
         }
-        healthy = false;
+
     }
 
     return healthy;
