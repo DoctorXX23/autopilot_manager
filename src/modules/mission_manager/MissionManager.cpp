@@ -217,6 +217,12 @@ bool MissionManager::debounce_is_stationary(bool is_stationary) {
     return false;
 }
 
+bool MissionManager::landing_triggered() {
+    const bool manual_triggered_land = _flight_mode == mavsdk::Telemetry::FlightMode::Land;
+    const bool mission_land = _flight_mode == mavsdk::Telemetry::FlightMode::Mission && _landed_state == mavsdk::Telemetry::LandedState::Landing;
+    return manual_triggered_land || mission_land;
+}
+
 bool MissionManager::under_manual_control() {
     switch (_flight_mode) {
         case mavsdk::Telemetry::FlightMode::Manual:
@@ -277,7 +283,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
         if (!_action_triggered) {
             std::string status{};
 
-            if (_flight_mode == mavsdk::Telemetry::FlightMode::Land) { // TODO: also consider RTL, but with an override for failsafe mode(s)
+            if (landing_triggered()) {
                 if (height_above_obstacle > 1.5 && safe_landing_state == 0 /*eLandingMapperState::UNHEALTHY*/) {
                     // If the safe landing status is unhealthy, then hold position.
                     _action->hold();

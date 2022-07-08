@@ -153,6 +153,7 @@ class MissionManager : public ModuleBase {
     bool is_stationary();
     bool debounce_is_stationary(bool is_stationary);
 
+    bool landing_triggered();
     bool under_manual_control();
 
     void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint,
