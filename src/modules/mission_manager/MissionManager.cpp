@@ -193,7 +193,7 @@ bool MissionManager::arrived_to_new_waypoint() {
 }
 
 bool MissionManager::is_stationary() {
-    static const double vel_tol = 0.2;
+    static const double vel_tol = 0.5;
     const double vel_mag =
         std::sqrt(std::pow(_current_vel_x, 2) + std::pow(_current_vel_y, 2) + std::pow(_current_vel_z, 2));
     return debounce_is_stationary(vel_mag < vel_tol);
