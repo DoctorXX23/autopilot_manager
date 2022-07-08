@@ -50,7 +50,6 @@ target_link_libraries(landing-manager
   landing_mapper
   ${rclcpp_LIBRARIES}
   ${image_downsampler_LIBRARIES}
-  ${px4_msgs_LIBRARIES}
   ${std_msgs_LIBRARIES}
   ${timing_tools_LIBRARIES}
   ${visualization_msgs_LIBRARIES}

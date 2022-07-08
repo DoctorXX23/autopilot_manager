@@ -12,7 +12,6 @@ endif()
 
 find_package(MAVSDK REQUIRED)
 find_package(ament_cmake REQUIRED)
-find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -31,7 +30,6 @@ add_library(sensor-manager SHARED SensorManager.cpp)
 ament_target_dependencies(sensor-manager
   Eigen3
   image_downsampler
-  px4_msgs
   sensor_msgs
   tf2_ros
 )
@@ -47,7 +45,6 @@ target_link_libraries(sensor-manager
   MAVSDK::mavsdk
   Eigen3::Eigen
   ${rclcpp_LIBRARIES}
-  ${px4_msgs_LIBRARIES}
   ${sensor_msgs_LIBRARIES}
   ${image_downsampler_LIBRARIES}
 )
@@ -57,7 +54,7 @@ target_link_libraries(sensor-manager
 ############
 
 # Export information to downstream packages
-ament_export_dependencies(ament_cmake rclcpp eigen3_cmake_module Eigen3 image_downsampler px4_msgs sensor_msgs tf2_ros)
+ament_export_dependencies(ament_cmake rclcpp eigen3_cmake_module Eigen3 image_downsampler sensor_msgs tf2_ros)
 ament_export_targets(export_sensor-manager HAS_LIBRARY_TARGET)
 
 ament_export_include_directories(include)

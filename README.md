@@ -25,8 +25,7 @@ _Note: The host system is considered to run Ubuntu 20.04 Focal. Other OS's might
     - `landing_planner`
     - `image_downsampler`
     - `timing_tools`
-2.  `px4_msgs`
-3.  Eigen v3.3.9
+2.  Eigen v3.3.9
 
 ### ROS 2 Foxy
 
@@ -153,7 +152,6 @@ git clone git@github.com:Auterion/image_downsampler.git src/image_downsampler
 git clone git@github.com:Auterion/landing_mapper.git -b develop src/landing_mapper
 git clone git@github.com:Auterion/landing_planner.git
 git clone git@github.com:Auterion/timing_tools.git
-git clone git@github.com:Auterion/px4_msgs.git -b develop src/px4_msgs
 # Build with Release optimizations
 colcon build --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
@@ -386,7 +384,7 @@ ros_cross_compile colcon_ws/src \
   --rosdistro foxy \
   --custom-setup-script colcon_ws/src/autopilot_manager/scripts/cross_compile_dependencies.sh \
   --custom-data-dir /tmp/MAVSDK \
-  --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner px4_msgs timing_tools \
+  --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner timing_tools \
   --colcon-defaults ~/colcon_ws/src/autopilot_manager/scripts/packaging/defaults.yaml
 ```
 

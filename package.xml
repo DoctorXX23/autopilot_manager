@@ -18,7 +18,6 @@
   <depend>image_downsampler</depend>
   <depend>landing_mapper</depend>
   <depend>landing_planner</depend>
-  <depend>px4_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>

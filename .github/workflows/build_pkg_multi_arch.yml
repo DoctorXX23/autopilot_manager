@@ -74,7 +74,6 @@ jobs:
           git clone git@github.com:Auterion/image_downsampler.git /tmp/colcon_ws/src/image_downsampler
           git clone git@github.com:Auterion/landing_mapper.git -b develop /tmp/colcon_ws/src/landing_mapper
           git clone git@github.com:Auterion/landing_planner.git /tmp/colcon_ws/src/landing_planner
-          git clone git@github.com:Auterion/px4_msgs.git -b develop /tmp/colcon_ws/src/px4_msgs
           git clone git@github.com:Auterion/timing_tools.git /tmp/colcon_ws/src/timing_tools
           # Run cross-compilation
           ros_cross_compile /tmp/colcon_ws \
@@ -83,12 +82,11 @@ jobs:
             --rosdistro ${{ matrix.ros2_distro }} \
             --custom-setup-script scripts/cross_compile_dependencies.sh \
             --custom-data-dir /tmp/MAVSDK \
-            --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner px4_msgs px4_ros_com timing_tools \
+            --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner timing_tools \
             --colcon-defaults /tmp/colcon_ws/src/autopilot_manager/scripts/packaging/defaults.yaml
       - name: Create zip
         run: |
           cd /tmp/colcon_ws/install_${{ matrix.arch }}
-          rm -rf px4_msgs px4_ros_com # we don't need the px4_msgs and px4_ros_com packaged here
           zip -r autopilot-manager_${{ matrix.ros2_distro }}_v${{ steps.refs.outputs.tag_version }}_${{ steps.refs.outputs.package_arch }}.zip .
       - name: Publish artefacts
         if: startsWith(github.ref, 'refs/tags/v')
