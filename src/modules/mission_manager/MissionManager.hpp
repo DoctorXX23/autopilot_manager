@@ -102,6 +102,7 @@ class MissionManager : public ModuleBase {
         // Landing site search config
         double landing_site_search_max_speed = 0.0;
         double landing_site_search_max_distance = 0.0;
+        double landing_site_search_min_height = 0.0;
         double landing_site_search_min_distance_after_abort = 0.0;
         double landing_site_search_arrival_radius = 0.0;
         double landing_site_search_assess_time = 0.0;

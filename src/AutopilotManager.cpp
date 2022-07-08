@@ -146,6 +146,7 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
     // Landing site search configurations
     _landing_site_search_max_speed = config.landing_site_search_max_speed;
     _landing_site_search_max_distance = config.landing_site_search_max_distance;
+    _landing_site_search_min_height = config.landing_site_search_min_height;
     _landing_site_search_min_distance_after_abort = config.landing_site_search_min_distance_after_abort;
     _landing_site_search_arrival_radius = config.landing_site_search_arrival_radius;
     _landing_site_search_assess_time = config.landing_site_search_assess_time;
@@ -214,6 +215,7 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     // Landing site search configurations
     config.landing_site_search_max_speed = _landing_site_search_max_speed;
     config.landing_site_search_max_distance = _landing_site_search_max_distance;
+    config.landing_site_search_min_height = _landing_site_search_min_height;
     config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
     config.landing_site_search_arrival_radius = _landing_site_search_arrival_radius;
     config.landing_site_search_assess_time = _landing_site_search_assess_time;
@@ -319,6 +321,7 @@ void AutopilotManager::start() {
             config.safe_landing_try_landing_after_action = _safe_landing_try_landing_after_action;
             config.landing_site_search_max_speed = _landing_site_search_max_speed;
             config.landing_site_search_max_distance = _landing_site_search_max_distance;
+            config.landing_site_search_min_height = _landing_site_search_min_height;
             config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
             config.landing_site_search_arrival_radius = _landing_site_search_arrival_radius;
             config.landing_site_search_assess_time = _landing_site_search_assess_time;

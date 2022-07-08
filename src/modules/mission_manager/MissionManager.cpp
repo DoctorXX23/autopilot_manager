@@ -251,6 +251,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
     const std::string safe_landing_on_no_safe_land = _mission_manager_config.safe_landing_on_no_safe_land;
     const double landing_site_search_max_speed = _mission_manager_config.landing_site_search_max_speed;
     const double landing_site_search_max_distance = _mission_manager_config.landing_site_search_max_distance;
+    const double landing_site_search_min_height = _mission_manager_config.landing_site_search_min_height;
     const double landing_site_search_min_distance_after_abort =
         _mission_manager_config.landing_site_search_min_distance_after_abort;
     const double landing_site_search_arrival_radius = _mission_manager_config.landing_site_search_arrival_radius;
@@ -360,6 +361,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             // Configure landing planner
                             landing_planner::LandingPlannerConfig lp_config;
                             lp_config.max_distance = landing_site_search_max_distance;
+                            lp_config.min_height = landing_site_search_min_height;
                             lp_config.min_distance_after_abort = landing_site_search_min_distance_after_abort;
                             lp_config.waypoint_arrival_radius = landing_site_search_arrival_radius;
                             lp_config.site_assess_time = landing_site_search_assess_time;
@@ -628,10 +630,10 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
             safe_landing_state == 4 /*eLandingMapperState::CAN_NOT_LAND*/) {
             // Attempting to land, but there's a problem.
             _action->hold();
-            _landing_planner.abortLanding();
             std::string status = std::string(missionManagerOut) + "Aborting landing at candidate site";
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
             std::cout << status << std::endl;
+            _landing_planner.abortLanding(_current_altitude_amsl, height_above_obstacle);
         }
     } else if (safe_landing_state == 5 /*eLandingMapperState::TOO_HIGH*/) {
         // Adjust search altitude
