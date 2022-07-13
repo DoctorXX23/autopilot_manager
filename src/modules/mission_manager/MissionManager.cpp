@@ -408,7 +408,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             } else {
                                 // Planner did not start correctly.
                                 _action->hold();
-                                landing_site_search_has_ended();
+                                landing_site_search_has_ended("NSC");
 
                                 status = std::string(missionManagerOut) +
                                          "Landing planner could not start. Holding position...";
@@ -524,18 +524,18 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 // Vehicle landed. Stop the landing site search.
                 std::cout << std::string(missionManagerOut) << "Vehicle landed or approaching ground." << std::endl;
                 _landing_planner.endSearch();
-                landing_site_search_has_ended();
+                landing_site_search_has_ended("OG");
             } else if (under_manual_control()) {
                 // Pilot took control. Stop the landing site search.
                 std::cout << std::string(missionManagerOut) << "Pilot has taken manual control (" << _flight_mode
-                          << " mode). Cancelling safe landing." << std::endl;
+                          << " mode). Canceling safe landing." << std::endl;
                 _landing_planner.endSearch();
-                landing_site_search_has_ended();
+                landing_site_search_has_ended("MAN");
             } else if (_flight_mode == mavsdk::Telemetry::FlightMode::ReturnToLaunch) {
                 // Mode switched to RTL. Stop the search.
                 std::cout << std::string(missionManagerOut) << "RTL triggered. Cancelling safe landing." << std::endl;
                 _landing_planner.endSearch();
-                landing_site_search_has_ended();
+                landing_site_search_has_ended("RTL");
             } else {
                 update_landing_site_search(safe_landing_state, height_above_obstacle,
                                            safe_landing_try_landing_after_action);
@@ -704,11 +704,11 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
      *  STEP 3: Restore normal flight configuration if search has ended
      */
     if (_landing_planner.state() == landing_planner::LandingSearchState::ENDED) {
-        landing_site_search_has_ended();
+        landing_site_search_has_ended("END");
     }
 }
 
-void MissionManager::landing_site_search_has_ended() {
+void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
     mavsdk::Action::Result result = _action->set_maximum_speed(_original_max_speed);
     if (result == mavsdk::Action::Result::Success) {
         std::cout << std::string(missionManagerOut) << "Restoring maximum speed to " << _original_max_speed
@@ -726,7 +726,12 @@ void MissionManager::landing_site_search_has_ended() {
               << "    *" << std::endl;
 
     if ( _server_utility ) {
-        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, "Landing Site Search has ended");
+        std::stringstream ss;
+        ss << "Landing Site Search has ended";
+        if ( _debug != "" ) {
+            ss << " (" <<_debug  << ")";
+        }
+        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, ss.str());
     }
 }
 

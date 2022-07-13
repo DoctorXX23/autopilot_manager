@@ -145,7 +145,7 @@ class MissionManager : public ModuleBase {
 
     void update_landing_site_search(const uint8_t safe_landing_state, const float height_above_obstacle,
                                     const bool land_when_found_site);
-    void landing_site_search_has_ended();
+    void landing_site_search_has_ended(const std::string& _debug = "");
 
     void set_global_position_reference();
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
