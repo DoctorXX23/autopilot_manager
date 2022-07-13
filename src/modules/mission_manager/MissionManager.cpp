@@ -364,6 +364,9 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                       << "***" << std::endl
                                       << "*" << std::endl;
 
+                            status = "Starting Landing Site Search";
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+
                             // Configure landing planner
                             landing_planner::LandingPlannerConfig lp_config;
                             lp_config.max_distance = landing_site_search_max_distance;
@@ -398,13 +401,13 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                 go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
                                                          _current_yaw * 180. / M_PI);
 
-                                std::stringstream ss;
-                                ss << missionManagerOut << "Landing site search started at: Lat " << std::fixed
-                                   << std::setprecision(6) << _new_latitude << "°, Lon " << _new_longitude << "°, Alt "
-                                   << std::setprecision(2) << _new_altitude_amsl << "m AMSL, Local (" << new_wpt.north_m
-                                   << ", " << new_wpt.east_m << ")" << std::endl;
-                                status = ss.str();
-                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+//                                std::stringstream ss;
+//                                ss << missionManagerOut << "Landing site search started at: Lat " << std::fixed
+//                                   << std::setprecision(6) << _new_latitude << "°, Lon " << _new_longitude << "°, Alt "
+//                                   << std::setprecision(2) << _new_altitude_amsl << "m AMSL, Local (" << new_wpt.north_m
+//                                   << ", " << new_wpt.east_m << ")" << std::endl;
+//                                status = ss.str();
+//                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
                             } else {
                                 // Planner did not start correctly.
                                 _action->hold();
