@@ -51,9 +51,8 @@ SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
       _tf_buffer(this->get_clock()),
       _tf_listener(_tf_buffer),
       _tf_depth_filter(_tf_buffer, NED_FRAME, 10, this->create_sub_node("tf_filter")),
-      _time_start{this->now()},
       _time_last_odometry{this->now()},
-      _time_last_image{this->now()} {}
+      _time_last_image{this->now()} { }
 
 SensorManager::~SensorManager() { deinit(); }
 
@@ -233,9 +232,9 @@ void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::C
 
 void SensorManager::health_check() {
     const auto now = this->now();
+    static rclcpp::Time time_start = now;
 
-    const auto s_since_start = (now - _time_start).seconds();
-
+    const auto s_since_start = (now - time_start).seconds();
     if ( s_since_start < 5.0 ) {
         return;
     }
@@ -251,6 +250,7 @@ void SensorManager::health_check() {
     static rclcpp::Time last_warning = now;
     const bool is_exceeded = this->now() > (last_warning + warning_interval);
 
+    static bool health_reported_once = false;
 
     if (!is_healthy && is_exceeded) {
         last_warning = now;
@@ -268,5 +268,10 @@ void SensorManager::health_check() {
         if ( _server_utility ) {
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
         }
+    }
+    else if (!health_reported_once) {
+        health_reported_once = true;
+        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Notice,
+                "Safe Landing: Input healthy. Good to go!");
     }
 }

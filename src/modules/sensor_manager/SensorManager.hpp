@@ -125,7 +125,6 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     rclcpp::TimerBase::SharedPtr _timer_status_task;
 
-    rclcpp::Time _time_start;
     rclcpp::Time _time_last_odometry;
     rclcpp::Time _time_last_image;
 
