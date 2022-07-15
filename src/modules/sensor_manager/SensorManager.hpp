@@ -57,6 +57,8 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <px4_msgs/msg/vehicle_status.hpp>
+
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/image_encodings.hpp>
@@ -100,6 +102,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     mutable std::mutex _sensor_manager_mutex;
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _depth_img_camera_info_sub;
+
+    rclcpp::Publisher<px4_msgs::msg::VehicleStatus>::SharedPtr _vehicle_status_pub; // for bagger in MAVLink mode
 
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;

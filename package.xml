@@ -21,6 +21,7 @@
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>px4_msgs</depend>
   <depend>tbb</depend>
   <depend>tf2_ros</depend>
   <depend>timing_tools</depend>

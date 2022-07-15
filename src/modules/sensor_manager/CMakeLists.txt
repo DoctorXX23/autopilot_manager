@@ -14,6 +14,7 @@ find_package(MAVSDK REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(px4_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 find_package(PythonInterp 3 REQUIRED)
@@ -31,6 +32,7 @@ ament_target_dependencies(sensor-manager
   Eigen3
   image_downsampler
   sensor_msgs
+  px4_msgs
   tf2_ros
 )
 target_include_directories(sensor-manager PUBLIC

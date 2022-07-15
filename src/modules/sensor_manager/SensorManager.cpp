@@ -90,6 +90,8 @@ void SensorManager::init() {
     _tf_depth_filter.connectInput(_tf_depth_subscriber);
     _tf_depth_filter.registerCallback(&SensorManager::handle_incoming_depth_image, this);
     _tf_depth_filter.setTolerance(rclcpp::Duration(0, static_cast<int>(10 * 1E6)));
+
+    _vehicle_status_pub = this->create_publisher<px4_msgs::msg::VehicleStatus>("vehicle_status/out", 10);  // for bagger in MAVLink mode
 }
 
 auto SensorManager::deinit() -> void { _depth_img_camera_info_sub.reset(); }
@@ -119,6 +121,18 @@ auto SensorManager::run() -> void {
         _tf_broadcaster.sendTransform(tMsg);
 
         _time_last_odometry = this->now();
+    });
+
+    _telemetry->subscribe_armed([this](bool _armed) {
+        px4_msgs::msg::VehicleStatus msg;
+        if ( _armed ) {
+            msg.arming_state = px4_msgs::msg::VehicleStatus::ARMING_STATE_ARMED;
+        }
+        else {
+            msg.arming_state = px4_msgs::msg::VehicleStatus::ARMING_STATE_STANDBY;
+        }
+
+        _vehicle_status_pub->publish(msg); // Send data for bagger
     });
 
     _timer_status_task = create_wall_timer(100ms, std::bind(&SensorManager::health_check, this));
