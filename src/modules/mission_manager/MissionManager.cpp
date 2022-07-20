@@ -357,49 +357,48 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         std::cout << status << std::endl;
 
                     } else if (safe_landing_on_no_safe_land == "LANDING_SITE_SEARCH") {
-                        if (_global_origin_reference_set) {
-                            std::cout << "*" << std::endl
-                                      << "***" << std::endl
-                                      << "***** Starting Landing Site Search" << std::endl
-                                      << "***" << std::endl
-                                      << "*" << std::endl;
+                        std::cout << "*" << std::endl
+                                  << "***" << std::endl
+                                  << "***** Starting Landing Site Search" << std::endl
+                                  << "***" << std::endl
+                                  << "*" << std::endl;
 
-                            status = "Starting Landing Site Search";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                        status = "Starting Landing Site Search";
+                        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
 
-                            // Configure landing planner
-                            landing_planner::LandingPlannerConfig lp_config;
-                            lp_config.max_distance = landing_site_search_max_distance;
-                            lp_config.min_height = landing_site_search_min_height;
-                            lp_config.min_distance_after_abort = landing_site_search_min_distance_after_abort;
-                            lp_config.waypoint_arrival_radius = landing_site_search_arrival_radius;
-                            lp_config.site_assess_time = landing_site_search_assess_time;
-                            lp_config.search_strategy = landing_site_search_strategy;
-                            lp_config.spiral_search_spacing = landing_site_search_spiral_spacing;
-                            lp_config.spiral_search_points = landing_site_search_spiral_points;
+                        // Configure landing planner
+                        landing_planner::LandingPlannerConfig lp_config;
+                        lp_config.max_distance = landing_site_search_max_distance;
+                        lp_config.min_height = landing_site_search_min_height;
+                        lp_config.min_distance_after_abort = landing_site_search_min_distance_after_abort;
+                        lp_config.waypoint_arrival_radius = landing_site_search_arrival_radius;
+                        lp_config.site_assess_time = landing_site_search_assess_time;
+                        lp_config.search_strategy = landing_site_search_strategy;
+                        lp_config.spiral_search_spacing = landing_site_search_spiral_spacing;
+                        lp_config.spiral_search_points = landing_site_search_spiral_points;
 
-                            // Start search
-                            _landing_planner.startSearch(_current_pos_x, _current_pos_y, _current_yaw,
-                                                         _current_altitude_amsl, lp_config);
+                        // Start search
+                        _landing_planner.startSearch(_current_pos_x, _current_pos_y, _current_yaw,
+                                                     _current_altitude_amsl, lp_config);
 
-                            if (_landing_planner.isActive()) {
-                                // Lower the maximum speed
-                                mavsdk::Action::Result result =
-                                    _action->set_maximum_speed(landing_site_search_max_speed);
-                                if (result == mavsdk::Action::Result::Success) {
-                                    std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
-                                              << _original_max_speed << " to " << landing_site_search_max_speed
-                                              << std::endl;
-                                } else {
-                                    std::cout << std::string(missionManagerOut)
-                                              << "Could not lower maximum speed for landing site search." << std::endl;
-                                }
+                        if (_landing_planner.isActive()) {
+                            // Lower the maximum speed
+                            mavsdk::Action::Result result =
+                                _action->set_maximum_speed(landing_site_search_max_speed);
+                            if (result == mavsdk::Action::Result::Success) {
+                                std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
+                                          << _original_max_speed << " to " << landing_site_search_max_speed
+                                          << std::endl;
+                            } else {
+                                std::cout << std::string(missionManagerOut)
+                                          << "Could not lower maximum speed for landing site search." << std::endl;
+                            }
 
-                                // Set the first waypoint in the search pattern
-                                const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
-                                    _landing_planner.getCurrentWaypoint();
-                                go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
-                                                         _current_yaw * 180. / M_PI);
+                            // Set the first waypoint in the search pattern
+                            const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
+                                _landing_planner.getCurrentWaypoint();
+                            go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
+                                                     _current_yaw * 180. / M_PI);
 
 //                                std::stringstream ss;
 //                                ss << missionManagerOut << "Landing site search started at: Lat " << std::fixed
@@ -408,22 +407,15 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 //                                   << ", " << new_wpt.east_m << ")" << std::endl;
 //                                status = ss.str();
 //                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
-                            } else {
-                                // Planner did not start correctly.
-                                _action->hold();
-                                landing_site_search_has_ended("NSC");
-
-                                status = std::string(missionManagerOut) +
-                                         "Landing planner could not start. Holding position...";
-                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning,
-                                                                  status);
-                            }
                         } else {
+                            // Planner did not start correctly.
                             _action->hold();
+                            landing_site_search_has_ended("NSC");
 
                             status = std::string(missionManagerOut) +
-                                     "Global position reference not set. Holding position...";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                                     "Landing planner could not start. Holding position...";
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning,
+                                                              status);
                         }
 
                         std::cout << status << std::endl;
