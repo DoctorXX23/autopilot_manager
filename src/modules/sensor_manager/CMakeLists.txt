@@ -22,6 +22,7 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
 find_package(image_downsampler REQUIRED)
+find_package(timing_tools REQUIRED)
 
 #################
 # Setup targets #
@@ -33,6 +34,7 @@ add_library(sensor-manager SHARED
 ament_target_dependencies(sensor-manager
   Eigen3
   image_downsampler
+  timing_tools
   sensor_msgs
   px4_msgs
   tf2_ros
@@ -53,6 +55,7 @@ target_link_libraries(sensor-manager
   ${rclcpp_LIBRARIES}
   ${sensor_msgs_LIBRARIES}
   ${image_downsampler_LIBRARIES}
+  ${timing_tools_LIBRARIES}
 )
 
 ############

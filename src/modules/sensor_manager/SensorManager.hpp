@@ -43,6 +43,7 @@
 #include "TimeSync.hpp"
 
 #include <common.h>
+#include <timing_tools/timing_tools.h>
 
 #include <Eigen/Dense>
 #include <ModuleBase.hpp>
@@ -137,6 +138,10 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     rclcpp::Time _time_last_image;
 
     TimeSync _time_sync;
+
+    timing_tools::FrequencyMeter _frequency_images;
+    timing_tools::FrequencyMeter _frequency_camera_info;
+    timing_tools::FrequencyMeter _frequency_odometry;
 
    protected:
     std::shared_ptr<ExtendedDownsampledImageF> _downsampled_depth;

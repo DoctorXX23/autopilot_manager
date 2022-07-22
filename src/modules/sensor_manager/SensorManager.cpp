@@ -52,7 +52,10 @@ SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
       _tf_listener(_tf_buffer),
       _tf_depth_filter(_tf_buffer, NED_FRAME, 10, this->create_sub_node("tf_filter")),
       _time_last_odometry{this->now()},
-      _time_last_image{this->now()} { }
+      _time_last_image{this->now()},
+      _frequency_images("sensor images"),
+      _frequency_camera_info("sensor camera_info"),
+      _frequency_odometry("sensor odometry") { }
 
 SensorManager::~SensorManager() { deinit(); }
 
@@ -101,6 +104,8 @@ auto SensorManager::deinit() -> void { _depth_img_camera_info_sub.reset(); }
 auto SensorManager::run() -> void {
     // Subscribe to odometry for publishing the TF
     _telemetry->subscribe_odometry([this](mavsdk::Telemetry::Odometry odometry) {
+        _frequency_odometry.tic();
+
         geometry_msgs::msg::TransformStamped tMsg{};
 
         tMsg.transform.translation = geometry_msgs::msg::Vector3{};
@@ -198,6 +203,8 @@ void SensorManager::set_camera_static_tf(const double x, const double y, const d
 }
 
 void SensorManager::handle_incoming_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg) {
+    _frequency_camera_info.tic();
+
     const RectifiedIntrinsicsF raw_intrinsics(msg->k[0], msg->k[4], msg->k[2], msg->k[5], msg->width, msg->height);
 
     if (_imageDownsampler == nullptr) {
@@ -211,6 +218,8 @@ void SensorManager::handle_incoming_camera_info(const sensor_msgs::msg::CameraIn
 }
 
 void SensorManager::handle_incoming_depth_image(const sensor_msgs::msg::Image::ConstSharedPtr& msg) {
+    _frequency_images.tic();
+
     set_downsampler(msg);
 
     if (_imageDownsampler == nullptr) {
