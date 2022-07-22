@@ -130,10 +130,10 @@ class LandingManager : public rclcpp::Node, ModuleBase {
 
     void printStats();
 
-    std::function<LandingManagerConfiguration()> _config_update_callback;
-
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
+
+    std::function<LandingManagerConfiguration()> _config_update_callback;
 
     std::unique_ptr<landing_mapper::LandingMapper<float>> _mapper;
     landing_mapper::LandingMapperParameter _mapper_parameter;
