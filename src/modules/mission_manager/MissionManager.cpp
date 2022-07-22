@@ -535,7 +535,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                            safe_landing_try_landing_after_action);
             }
         } else if (std::isfinite(_new_latitude) && std::isfinite(_new_longitude) && std::isfinite(_new_altitude_amsl)) {
-            if (arrived_to_new_waypoint()) {
+            if (arrived_to_new_waypoint() && _landed_state == mavsdk::Telemetry::LandedState::InAir) {
                 // if the user set it wants to try landing again after arriving to the waypoint
                 // then land and unset the new waypoint
                 if (safe_landing_try_landing_after_action) {
