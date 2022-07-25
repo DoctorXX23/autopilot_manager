@@ -66,7 +66,7 @@ void LandingManager::initParameters() {
     _landing_manager_config = _config_update_callback();
 
     _mapper_parameter.max_search_altitude_m = 8.f;
-    _mapper_parameter.max_window_size_m = 5;
+    _mapper_parameter.max_window_size_m = 8;
 
     _mapper_parameter.search_altitude_m = 7.5f;
     _mapper_parameter.window_size_m = 2.0f;
@@ -74,7 +74,7 @@ void LandingManager::initParameters() {
     _mapper_parameter.distance_threshold_m = 0.1f;
     _mapper_parameter.neg_peak_tresh = 0.75f;
     _mapper_parameter.pos_peak_tresh = 0.19f;
-    _mapper_parameter.std_dev_tresh = 0.075f;
+    _mapper_parameter.std_dev_tresh = 0.085f;
     _mapper_parameter.percentage_of_valid_samples_in_window = 0.7f;
     _mapper_parameter.voxel_size_m = 0.1f;
 
