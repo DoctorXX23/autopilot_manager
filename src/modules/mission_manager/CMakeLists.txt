@@ -26,6 +26,7 @@ add_library(
 target_link_libraries(mission-manager
     MAVSDK::mavsdk_action
     MAVSDK::mavsdk_custom_action
+    MAVSDK::mavsdk_mission_raw
     MAVSDK::mavsdk_server_utility
     MAVSDK::mavsdk_telemetry
     MAVSDK::mavsdk

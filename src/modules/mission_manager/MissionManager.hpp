@@ -54,6 +54,7 @@
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/custom_action/custom_action.h>
+#include <mavsdk/plugins/mission_raw/mission_raw.h>
 #include <mavsdk/plugins/server_utility/server_utility.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
@@ -180,6 +181,7 @@ class MissionManager : public ModuleBase {
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<CustomActionHandler> _custom_action_handler;
     std::shared_ptr<mavsdk::Action> _action;
+    std::shared_ptr<mavsdk::MissionRaw> _mission_raw;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
 
@@ -220,4 +222,11 @@ class MissionManager : public ModuleBase {
 
     std::thread _decision_maker_th;
     std::thread _global_origin_reference_th;
+
+    bool _was_mission_paused;
+    bool _was_landing_paused;
+
+    double _landing_latitude_deg;
+    double _landing_longitude_deg;
+    int _landing_waypoint_id;
 };
