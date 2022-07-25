@@ -40,6 +40,8 @@
 
 #pragma once
 
+#include "TimeSync.hpp"
+
 #include <common.h>
 
 #include <Eigen/Dense>
@@ -67,6 +69,7 @@
 
 // MAVSDK dependencies
 #include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/plugins/server_utility/server_utility.h>
 
@@ -108,6 +111,7 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
+    std::shared_ptr<mavsdk::MavlinkPassthrough> _mavlink_passthrough;
 
     std::shared_ptr<ImageDownsamplerInterface> _imageDownsampler;
 
@@ -131,6 +135,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     rclcpp::Time _time_last_odometry;
     rclcpp::Time _time_last_image;
+
+    TimeSync _time_sync;
 
    protected:
     std::shared_ptr<ExtendedDownsampledImageF> _downsampled_depth;

@@ -27,7 +27,9 @@ find_package(image_downsampler REQUIRED)
 # Setup targets #
 #################
 
-add_library(sensor-manager SHARED SensorManager.cpp)
+add_library(sensor-manager SHARED 
+  SensorManager.cpp
+  TimeSync.cpp)
 ament_target_dependencies(sensor-manager
   Eigen3
   image_downsampler
@@ -45,6 +47,7 @@ target_include_directories(sensor-manager PUBLIC
 target_link_libraries(sensor-manager
   MAVSDK::mavsdk_server_utility
   MAVSDK::mavsdk_telemetry
+  MAVSDK::mavsdk_mavlink_passthrough
   MAVSDK::mavsdk
   Eigen3::Eigen
   ${rclcpp_LIBRARIES}

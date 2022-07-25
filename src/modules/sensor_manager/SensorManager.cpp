@@ -79,6 +79,8 @@ void SensorManager::init() {
     _telemetry = std::make_shared<mavsdk::Telemetry>(_mavsdk_system);
     _server_utility = std::make_shared<mavsdk::ServerUtility>(_mavsdk_system);
 
+    _mavlink_passthrough = std::make_shared<mavsdk::MavlinkPassthrough>(_mavsdk_system);
+
     _depth_img_camera_info_sub = this->create_subscription<sensor_msgs::msg::CameraInfo>(
         depth_camera_info_topic, qos,
         [this](const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) { handle_incoming_camera_info(msg); });
@@ -112,9 +114,9 @@ auto SensorManager::run() -> void {
         tMsg.transform.rotation.y = odometry.q.y;
         tMsg.transform.rotation.z = odometry.q.z;
 
-        // tMsg.header.stamp.sec = msg->timestamp / 1000000;
-        // tMsg.header.stamp.nanosec = (msg->timestamp - tMsg.header.stamp.sec * 1000000) * 1000;
-        tMsg.header.stamp = this->now();
+        uint64_t ts_ns = _time_sync.sync_stamp(odometry.time_usec, this->now().nanoseconds() / 1000ULL) * 1000;
+        tMsg.header.stamp = rclcpp::Time(ts_ns);
+
         tMsg.header.frame_id = NED_FRAME;
         tMsg.child_frame_id = BASE_LINK_FRAME;
 
@@ -133,6 +135,14 @@ auto SensorManager::run() -> void {
         }
 
         _vehicle_status_pub->publish(msg); // Send data for bagger
+    });
+
+
+    _mavlink_passthrough->subscribe_message_async(MAVLINK_MSG_ID_TIMESYNC, [this](const mavlink_message_t& _message) {
+        mavlink_timesync_t tsync;
+        mavlink_msg_timesync_decode(&_message, &tsync);
+
+        _time_sync.run(tsync.ts1, tsync.tc1, this->now().nanoseconds() / 1000ULL);
     });
 
     _timer_status_task = create_wall_timer(100ms, std::bind(&SensorManager::health_check, this));
@@ -256,8 +266,8 @@ void SensorManager::health_check() {
     const auto s_since_last_odom = (now - _time_last_odometry).seconds();
     const auto s_since_last_image = (now - _time_last_image).seconds();
 
-    const bool is_odom_healthy = s_since_last_odom < std::chrono::duration<double>(200ms).count();
-    const bool is_image_healthy = s_since_last_image < std::chrono::duration<double>(400ms).count();
+    const bool is_odom_healthy = s_since_last_odom < std::chrono::duration<double>(300ms).count();
+    const bool is_image_healthy = s_since_last_image < std::chrono::duration<double>(600ms).count();
     const bool is_healthy = is_odom_healthy && is_image_healthy;
 
     const rclcpp::Duration warning_interval(2, 0);
@@ -288,4 +298,13 @@ void SensorManager::health_check() {
         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Notice,
                 "Safe Landing: Input healthy. Good to go!");
     }
+
+
+    mavlink_timesync_t timesync_message;
+    timesync_message.ts1 = this->now().nanoseconds();
+
+    mavlink_message_t message_out;
+    mavlink_msg_timesync_encode(1, MAV_COMP_ID_ONBOARD_COMPUTER3, &message_out,
+                                                           &timesync_message);
+    _mavlink_passthrough->send_message(message_out);
 }
