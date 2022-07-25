@@ -57,7 +57,8 @@ void parse_argv(int argc, char* const argv[], uint32_t& mavlink_port, std::strin
     static const struct option options[] = {{"file-custom-action-config", required_argument, nullptr, 'a'},
                                             {"file-autopilot-manager-config", required_argument, nullptr, 'c'},
                                             {"mavlink-port", required_argument, nullptr, 'm'},
-                                            {"help", no_argument, nullptr, 'h'}};
+                                            {"help", no_argument, nullptr, 'h'},
+                                            {nullptr, 0, nullptr, 0}};
 
     int c = 0;
     bool invalid_argument = false;
