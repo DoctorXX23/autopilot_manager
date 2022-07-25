@@ -75,6 +75,7 @@ void MissionManager::init() {
 
     // Actions are processed and executed in the Mission Manager decion maker
     _action = std::make_shared<mavsdk::Action>(_mavsdk_system);
+    _action->set_maximum_speed(5.f);
 
     // Telemetry data checks are fundamental for proper execution
     _telemetry = std::make_shared<mavsdk::Telemetry>(_mavsdk_system);
