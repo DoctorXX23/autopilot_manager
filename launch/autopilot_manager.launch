@@ -3,6 +3,7 @@ from launch_ros.actions import Node
 from launch.substitutions import ThisLaunchFileDir
 from launch.actions import LogInfo, Shutdown, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from ament_index_python.packages import get_package_share_directory
 
 custom_action_config = '/shared_container_dir/autopilot-manager/data/custom_action/custom_action.json'
 autopilot_manager_config = '/shared_container_dir/autopilot-manager/data/config/autopilot_manager.conf'
@@ -12,6 +13,9 @@ def generate_launch_description():
     return LaunchDescription([
         IncludeLaunchDescription(PythonLaunchDescriptionSource(
             [ThisLaunchFileDir(), '/static_tf.launch'])),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([get_package_share_directory('ros2bagger'), '/launch/safe_landing.launch'])
+        ),
         Node(
             package='autopilot-manager',
             executable='autopilot-manager',
