@@ -71,6 +71,7 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
       _was_landing_paused{false},
       _landing_latitude_deg{NAN},
       _landing_longitude_deg{NAN},
+      _landing_altitude_m{NAN},
       _landing_waypoint_id{-1} {}
 
 MissionManager::~MissionManager() { deinit(); }
@@ -723,9 +724,11 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
 
                 _landing_latitude_deg = landing_wp.x;
                 _landing_longitude_deg = landing_wp.y;
+                _landing_altitude_m = landing_wp->z;
 
                 landing_wp.x = global_waypoint.latitude_deg * 10e6;
                 landing_wp.y = global_waypoint.longitude_deg * 10e6;
+                landing_wp.z = -_current_pos_z;
 
                 _mission_raw->upload_mission(mission);
                 _mission_raw->set_current_mission_item(id);
@@ -834,6 +837,7 @@ void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
 
             landing_wp.x = _landing_latitude_deg;
             landing_wp.y = _landing_longitude_deg;
+            landing_wp.z = _landing_altitude_m;
 
             std::cout << "to"  << std::endl;
             std::cout << landing_wp  << std::endl;
@@ -847,6 +851,7 @@ void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
 
             _landing_latitude_deg = NAN;
             _landing_longitude_deg = NAN;
+            _landing_altitude_m = NAN;
         }
 
         _landing_waypoint_id = -1;

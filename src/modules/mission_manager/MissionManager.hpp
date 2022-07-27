@@ -228,5 +228,6 @@ class MissionManager : public ModuleBase {
 
     double _landing_latitude_deg;
     double _landing_longitude_deg;
+    double _landing_altitude_m;
     int _landing_waypoint_id;
 };
