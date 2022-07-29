@@ -228,7 +228,8 @@ bool MissionManager::debounce_is_stationary(bool is_stationary) {
 
 bool MissionManager::landing_triggered() {
     const bool manual_triggered_land = _flight_mode == mavsdk::Telemetry::FlightMode::Land;
-    const bool mission_land = _flight_mode == mavsdk::Telemetry::FlightMode::Mission && _landed_state == mavsdk::Telemetry::LandedState::Landing;
+    const bool mission_land = _flight_mode == mavsdk::Telemetry::FlightMode::Mission &&
+                              _landed_state == mavsdk::Telemetry::LandedState::Landing;
     return manual_triggered_land || mission_land;
 }
 
@@ -254,14 +255,15 @@ void MissionManager::go_to_new_local_waypoint(
         get_global_position_from_local_position(local_waypoint);
 
     // Store info how to continue after landing site found (return to mission or land).
-    if ( !_was_landing_paused && !_was_mission_paused) {
+    if (!_was_landing_paused && !_was_mission_paused) {
         const bool manual_triggered_land = _flight_mode == mavsdk::Telemetry::FlightMode::Land;
-        const bool mission_land = _flight_mode == mavsdk::Telemetry::FlightMode::Mission && _landed_state == mavsdk::Telemetry::LandedState::Landing;
+        const bool mission_land = _flight_mode == mavsdk::Telemetry::FlightMode::Mission &&
+                                  _landed_state == mavsdk::Telemetry::LandedState::Landing;
 
-        if ( manual_triggered_land ) {
+        if (manual_triggered_land) {
             _was_landing_paused = true;
             _was_mission_paused = false;
-        } else  if ( mission_land ) {
+        } else if (mission_land) {
             _was_landing_paused = false;
             _was_mission_paused = true;
         }
@@ -411,8 +413,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                         if (_landing_planner.isActive()) {
                             // Lower the maximum speed
-                            mavsdk::Action::Result result =
-                                _action->set_maximum_speed(landing_site_search_max_speed);
+                            mavsdk::Action::Result result = _action->set_maximum_speed(landing_site_search_max_speed);
                             if (result == mavsdk::Action::Result::Success) {
                                 std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
                                           << _original_max_speed << " to " << landing_site_search_max_speed
@@ -428,22 +429,25 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
                                                      _current_yaw * 180. / M_PI);
 
-//                                std::stringstream ss;
-//                                ss << missionManagerOut << "Landing site search started at: Lat " << std::fixed
-//                                   << std::setprecision(6) << _new_latitude << "°, Lon " << _new_longitude << "°, Alt "
-//                                   << std::setprecision(2) << _new_altitude_amsl << "m AMSL, Local (" << new_wpt.north_m
-//                                   << ", " << new_wpt.east_m << ")" << std::endl;
-//                                status = ss.str();
-//                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+                            // std::stringstream ss;
+                            // ss << missionManagerOut << "Landing site search started
+                            // at: Lat " << std::fixed
+                            //     << std::setprecision(6) << _new_latitude << "°, Lon "
+                            //     << _new_longitude << "°, Alt "
+                            //     << std::setprecision(2) << _new_altitude_amsl << "m
+                            //     AMSL, Local (" << new_wpt.north_m
+                            //     << ", " << new_wpt.east_m << ")" << std::endl;
+                            // status = ss.str();
+                            // _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info,
+                            // status);
                         } else {
                             // Planner did not start correctly.
                             _action->hold();
                             landing_site_search_has_ended("NSC");
 
-                            status = std::string(missionManagerOut) +
-                                     "Landing planner could not start. Holding position...";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning,
-                                                              status);
+                            status =
+                                std::string(missionManagerOut) + "Landing planner could not start. Holding position...";
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                         }
 
                         std::cout << status << std::endl;
@@ -543,7 +547,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
          */
         if (_landing_planner.isActive()) {
             if (_landed_state == mavsdk::Telemetry::LandedState::OnGround ||
-                    safe_landing_state == 2 /*eLandingMapperState::CLOSE_TO_GROUND*/) {
+                safe_landing_state == 2 /*eLandingMapperState::CLOSE_TO_GROUND*/) {
                 // Vehicle landed. Stop the landing site search.
                 std::cout << std::string(missionManagerOut) << "Vehicle landed or approaching ground." << std::endl;
                 _landing_planner.endSearch();
@@ -559,9 +563,9 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 std::cout << std::string(missionManagerOut) << "RTL triggered. Canceling safe landing." << std::endl;
                 _landing_planner.endSearch();
                 landing_site_search_has_ended("RTL");
-            }  else if ( (_landing_waypoint_id != -1) && (_landing_waypoint_id < progress.current) ) {
-                std::cout << std::string(missionManagerOut) << "Target WP changed from "
-                          << _landing_waypoint_id << " to " << progress.current << ". Ending safe landing search." << std::endl;
+            } else if ((_landing_waypoint_id != -1) && (_landing_waypoint_id < progress.current)) {
+                std::cout << std::string(missionManagerOut) << "Target WP changed from " << _landing_waypoint_id
+                          << " to " << progress.current << ". Ending safe landing search." << std::endl;
                 _landing_planner.endSearch();
                 landing_site_search_has_ended("WPC");
             } else {
@@ -693,14 +697,14 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
     }
 
     mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
-//    std::cout << "landing planner state=" << _landing_planner.state()
-//              << "  safe_landing_state=" <<  (landing_mapper::eLandingMapperState)safe_landing_state
-//              << "  should_initiate_landing=" <<  should_initiate_landing
-//              << "  wp updated=" << _landing_planner.waypointUpdated()
-//              << "  wp id=" <<  _landing_waypoint_id
-//              << "  mission prog " <<  progress.current
-//              << "/" <<  progress.total
-//              << std::endl;
+    // std::cout << "landing planner state=" << _landing_planner.state()
+    //             << "  safe_landing_state=" <<  (landing_mapper::eLandingMapperState)safe_landing_state
+    //             << "  should_initiate_landing=" <<  should_initiate_landing
+    //             << "  wp updated=" << _landing_planner.waypointUpdated()
+    //             << "  wp id=" <<  _landing_waypoint_id
+    //             << "  mission prog " <<  progress.current
+    //             << "/" <<  progress.total
+    //             << std::endl;
 
     /*
      *  STEP 2: Send commands to vehicle
@@ -712,7 +716,7 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         if (land_when_found_site) {
             status += "Landing...";
             // TODO rework and put to a separate function
-            if ( _was_mission_paused ) {
+            if (_was_mission_paused) {
                 status += " 1 ";
 
                 const mavsdk::geometry::CoordinateTransformation::GlobalCoordinate global_waypoint =
@@ -722,21 +726,20 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
                 std::vector<mavsdk::MissionRaw::MissionItem> mission;
                 std::tie(result, mission) = _mission_raw->download_mission();
 
-
                 // Hack for last wp is landing. Unclear why necessary.
-                int id = progress.current-1;
+                int id = progress.current - 1;
                 _landing_waypoint_id = progress.current;
 
                 mavsdk::MissionRaw::MissionItem* landing_wp = &mission[id];
-                if ( landing_wp->command != 21 /* MAV_CMD_NAV_TAKEOFF */ ) {
+                if (landing_wp->command != 21 /* MAV_CMD_NAV_TAKEOFF */) {
                     std::cout << "**************** " << __LINE__ << std::endl;
                     std::cout << "*    WARNING   * " << __LINE__ << std::endl;
                     std::cout << "**************** " << __LINE__ << std::endl;
                     std::cout << "Mission item no landing waypoint" << std::endl;
                     std::cout << *landing_wp << std::endl;
-                    landing_wp = &mission[id+1];
+                    landing_wp = &mission[id + 1];
 
-                    if ( landing_wp->command != 21 /* MAV_CMD_NAV_TAKEOFF */ ) {
+                    if (landing_wp->command != 21 /* MAV_CMD_NAV_TAKEOFF */) {
                         std::cout << "AHHHHH WARNING " << __LINE__ << std::endl;
                         std::cout << "AHHHHH WARNING " << __LINE__ << std::endl;
                         std::cout << "Mission item no landing waypoint" << std::endl;
@@ -756,24 +759,24 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
                 landing_wp->z = -_current_pos_z;
 
                 mavsdk::MissionRaw::Result res_upload = _mission_raw->upload_mission(mission);
-//                mavsdk::MissionRaw::Result res_set = _mission_raw->set_current_mission_item(landing_wp->seq);
+                // mavsdk::MissionRaw::Result res_set = _mission_raw->set_current_mission_item(landing_wp->seq);
                 mavsdk::MissionRaw::Result res_start = _mission_raw->start_mission();
 
                 const bool upload_failed = res_upload != mavsdk::MissionRaw::Result::Success;
-//                const bool set_failed = res_set != mavsdk::MissionRaw::Result::Success;
+                // const bool set_failed = res_set != mavsdk::MissionRaw::Result::Success;
                 const bool start_failed = res_start != mavsdk::MissionRaw::Result::Success;
-                if ( upload_failed || start_failed ) {
-                    std::cout << "failed mission (" << id << "/" << progress.current << "/" << progress.total << ")" << std::endl;
+                if (upload_failed || start_failed) {
+                    std::cout << "failed mission (" << id << "/" << progress.current << "/" << progress.total << ")"
+                              << std::endl;
                     for (const auto& item : mission) {
                         std::cout << "- " << item << std::endl;
                     }
                 }
 
-            } else if ( _was_landing_paused ) {
+            } else if (_was_landing_paused) {
                 status += " 2 ";
                 _action->land();
-            }
-            else {
+            } else {
                 status += " 3 ";
                 // TODO check why this happens and make something reasonable here.
             }
@@ -834,72 +837,73 @@ void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
               << "  ***" << std::endl
               << "    *" << std::endl;
 
-    if ( _server_utility ) {
+    if (_server_utility) {
         std::stringstream ss;
         ss << "Landing Site Search has ended";
-        if ( _debug != "" ) {
-            ss << " (" <<_debug  << ")";
+        if (_debug != "") {
+            ss << " (" << _debug << ")";
         }
         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, ss.str());
     }
 
-// TODO This does not work, as this function is already called when the vehicle is stell in air but "close to ground". Thus, it
-//      would result in the vehicle moving towards the originally planned landing waypoint from 1.5m height.
-//    // TODO rework and put to a separate function
-//    if ( _was_mission_paused ) {
-//        if ( std::isfinite(_landing_latitude_deg) && std::isfinite(_landing_longitude_deg) ) {
-//            mavsdk::MissionRaw::Result result;
-//            std::vector<mavsdk::MissionRaw::MissionItem> mission;
-//            std::tie(result, mission) = _mission_raw->download_mission();
-//            mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
-//
-//            std::cout << "mission (" << progress.current << "/" << progress.total << ")" << std::endl;
-//            for (const auto& item : mission) {
-//                std::cout << "- " << item << std::endl;
-//            }
-//            std::cout << std::endl;
-//
-//            int id = progress.current-1;
-//            if ( progress.current+1 == progress.total ) {
-//                id = progress.current;
-//            }
-//            if ( _debug == "WPC" ) {
-//                id--;
-//            }
-//
-//            mavsdk::MissionRaw::MissionItem* landing_wp = &mission[id];
-//            if ( landing_wp->command != 21 ) {
-//                std::cout << "WARNING " << __LINE__ << std::endl;
-//                std::cout << "WARNING " << __LINE__ << std::endl;
-//                std::cout << "Mission item no landing waypoint" << std::endl;
-//                std::cout << landing_wp << std::endl;
-//                landing_wp = &mission[id+1];
-//            }
-//
-//            std::cout << "Reset"  << std::endl;
-//            std::cout << *landing_wp  << std::endl;
-//
-//            landing_wp->x = _landing_latitude_deg;
-//            landing_wp->y = _landing_longitude_deg;
-//            landing_wp->z = _landing_altitude_m;
-//
-//            std::cout << "to"  << std::endl;
-//            std::cout << *landing_wp  << std::endl;
-//
-//            std::cout << "mission now (" << progress.current << "/" << progress.total << ")" << std::endl;
-//            for (const auto& item : mission) {
-//                std::cout << "- " << item << std::endl;
-//            }
-//
-//            _mission_raw->upload_mission(mission);
-//
-//            _landing_latitude_deg = NAN;
-//            _landing_longitude_deg = NAN;
-//            _landing_altitude_m = NAN;
-//        }
-//
-//        _landing_waypoint_id = -1;
-//    }
+    // TODO This does not work, as this function is already called when the vehicle is stell in air but "close to
+    // ground". Thus, it would result in the vehicle moving towards the originally planned landing waypoint from 1.5m
+    // height.
+    // TODO rework and put to a separate function
+    // if ( _was_mission_paused ) {
+    //     if ( std::isfinite(_landing_latitude_deg) && std::isfinite(_landing_longitude_deg) ) {
+    //         mavsdk::MissionRaw::Result result;
+    //         std::vector<mavsdk::MissionRaw::MissionItem> mission;
+    //         std::tie(result, mission) = _mission_raw->download_mission();
+    //         mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
+
+    //         std::cout << "mission (" << progress.current << "/" << progress.total << ")" << std::endl;
+    //         for (const auto& item : mission) {
+    //             std::cout << "- " << item << std::endl;
+    //         }
+    //         std::cout << std::endl;
+
+    //         int id = progress.current-1;
+    //         if ( progress.current+1 == progress.total ) {
+    //             id = progress.current;
+    //         }
+    //         if ( _debug == "WPC" ) {
+    //             id--;
+    //         }
+
+    //         mavsdk::MissionRaw::MissionItem* landing_wp = &mission[id];
+    //         if ( landing_wp->command != 21 ) {
+    //             std::cout << "WARNING " << __LINE__ << std::endl;
+    //             std::cout << "WARNING " << __LINE__ << std::endl;
+    //             std::cout << "Mission item no landing waypoint" << std::endl;
+    //             std::cout << landing_wp << std::endl;
+    //             landing_wp = &mission[id+1];
+    //         }
+
+    //         std::cout << "Reset"  << std::endl;
+    //         std::cout << *landing_wp  << std::endl;
+
+    //         landing_wp->x = _landing_latitude_deg;
+    //         landing_wp->y = _landing_longitude_deg;
+    //         landing_wp->z = _landing_altitude_m;
+
+    //         std::cout << "to"  << std::endl;
+    //         std::cout << *landing_wp  << std::endl;
+
+    //         std::cout << "mission now (" << progress.current << "/" << progress.total << ")" << std::endl;
+    //         for (const auto& item : mission) {
+    //             std::cout << "- " << item << std::endl;
+    //         }
+
+    //         _mission_raw->upload_mission(mission);
+
+    //         _landing_latitude_deg = NAN;
+    //         _landing_longitude_deg = NAN;
+    //         _landing_altitude_m = NAN;
+    //     }
+
+    //     _landing_waypoint_id = -1;
+    // }
 
     _was_mission_paused = false;
     _was_landing_paused = false;

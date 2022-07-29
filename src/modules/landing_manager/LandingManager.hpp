@@ -57,7 +57,6 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 
-
 // MAVSDK dependencies
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/server_utility/server_utility.h>

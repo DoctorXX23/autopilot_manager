@@ -40,8 +40,6 @@
 
 #pragma once
 
-#include "TimeSync.hpp"
-
 #include <common.h>
 #include <timing_tools/timing_tools.h>
 
@@ -50,6 +48,8 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+
+#include "TimeSync.hpp"
 
 // ROS dependencies
 #include <message_filters/subscriber.h>
@@ -61,7 +61,6 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <px4_msgs/msg/vehicle_status.hpp>
-
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/image_encodings.hpp>
@@ -71,8 +70,8 @@
 // MAVSDK dependencies
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
 #include <mavsdk/plugins/server_utility/server_utility.h>
+#include <mavsdk/plugins/telemetry/telemetry.h>
 
 inline static constexpr auto sensorManagerOut = "[Sensor  Manager]";
 
@@ -107,7 +106,7 @@ class SensorManager : public rclcpp::Node, ModuleBase {
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _depth_img_camera_info_sub;
 
-    rclcpp::Publisher<px4_msgs::msg::VehicleStatus>::SharedPtr _vehicle_status_pub; // for bagger in MAVLink mode
+    rclcpp::Publisher<px4_msgs::msg::VehicleStatus>::SharedPtr _vehicle_status_pub;  // for bagger in MAVLink mode
 
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;

@@ -41,17 +41,13 @@
 
 using namespace std::chrono_literals;
 
-TimeSync::TimeSync() { }
+TimeSync::TimeSync() {}
 
-TimeSync::~TimeSync() { }
+TimeSync::~TimeSync() {}
 
-bool TimeSync::sync_converged()
-{
-    return _sequence >= CONVERGENCE_WINDOW;
-}
+bool TimeSync::sync_converged() { return _sequence >= CONVERGENCE_WINDOW; }
 
-void TimeSync::reset_filter()
-{
+void TimeSync::reset_filter() {
     // Do a full reset of all statistics and parameters
     _sequence = 0;
     _time_offset = 0.0;
@@ -60,11 +56,9 @@ void TimeSync::reset_filter()
     _filter_beta = BETA_GAIN_INITIAL;
     _high_deviation_count = 0;
     _high_rtt_count = 0;
-
 }
 
-void TimeSync::add_sample(int64_t offset_us)
-{
+void TimeSync::add_sample(int64_t offset_us) {
     /* Online exponential smoothing filter. The derivative of the estimate is also
      * estimated in order to produce an estimate without steady state lag:
      * https://en.wikipedia.org/wiki/Exponential_smoothing#Double_exponential_smoothing
@@ -72,7 +66,7 @@ void TimeSync::add_sample(int64_t offset_us)
 
     double time_offset_prev = _time_offset;
 
-    if (_sequence == 0) {           // First offset sample
+    if (_sequence == 0) {  // First offset sample
         _time_offset = offset_us;
 
     } else {
@@ -82,10 +76,8 @@ void TimeSync::add_sample(int64_t offset_us)
         // Update the clock skew estimate
         _time_skew = _filter_beta * (_time_offset - time_offset_prev) + (1.0 - _filter_beta) * _time_skew;
     }
-
 }
-uint64_t TimeSync::sync_stamp(uint64_t usec, uint64_t _now_us)
-{
+uint64_t TimeSync::sync_stamp(uint64_t usec, uint64_t _now_us) {
     // Only return synchronised stamp if we have converged to a good value
     if (sync_converged()) {
         return usec + (int64_t)_time_offset;
@@ -95,14 +87,13 @@ uint64_t TimeSync::sync_stamp(uint64_t usec, uint64_t _now_us)
     }
 }
 
-void TimeSync::run(int64_t _ts1, int64_t _tc1, uint64_t _now_us)
-{
+void TimeSync::run(int64_t _ts1, int64_t _tc1, uint64_t _now_us) {
     const bool ts1_ok = _ts1 > 0;
     const bool tc1_ok = _tc1 > 0;
-    if ( ts1_ok && tc1_ok ) {
+    if (ts1_ok && tc1_ok) {
         // Calculate time offset between this system and the remote system, assuming RTT for
         // the timesync packet is roughly equal both ways.
-        int64_t offset_us = (int64_t)((_ts1 / 1000ULL) + _now_us - (_tc1 / 1000ULL) * 2) / 2 ;
+        int64_t offset_us = (int64_t)((_ts1 / 1000ULL) + _now_us - (_tc1 / 1000ULL) * 2) / 2;
 
         // Calculate the round trip time (RTT) it took the timesync packet to bounce back to us from remote system
         uint64_t rtt_us = _now_us - (_ts1 / 1000ULL);
@@ -110,22 +101,21 @@ void TimeSync::run(int64_t _ts1, int64_t _tc1, uint64_t _now_us)
         // Calculate the difference of this sample from the current estimate
         uint64_t deviation = llabs((int64_t)_time_offset - offset_us);
 
-//        static int count = 0;
-//        count++;
-//        if ( (count > 20) && (sequence < CONVERGENCE_WINDOW) ) {
-//            count = 0;
-//            std::cout << "timesync tc1 " << _tc1
-//                      << " ts1 " << _ts1
-//                      << " sequence " << _sequence
-//                      << " deviation " << deviation
-//                      << " rtt_us " << rtt_us
-//                      << std::endl;
-//        }
+        // static int count = 0;
+        // count++;
+        // if ( (count > 20) && (sequence < CONVERGENCE_WINDOW) ) {
+        //     count = 0;
+        //     std::cout << "timesync tc1 " << _tc1
+        //                 << " ts1 " << _ts1
+        //                 << " sequence " << _sequence
+        //                 << " deviation " << deviation
+        //                 << " rtt_us " << rtt_us
+        //                 << std::endl;
+        // }
 
         if (rtt_us < MAX_RTT_SAMPLE) {  // Only use samples with low RTT
 
             if (sync_converged() && (deviation > MAX_DEVIATION_SAMPLE)) {
-
                 // Increment the counter if we have a good estimate and are getting samples far from the estimate
                 _high_deviation_count++;
 
@@ -138,7 +128,6 @@ void TimeSync::run(int64_t _ts1, int64_t _tc1, uint64_t _now_us)
                 }
 
             } else {
-
                 // Filter gain scheduling
                 if (!sync_converged()) {
                     // Interpolate with a sigmoid function
@@ -164,8 +153,6 @@ void TimeSync::run(int64_t _ts1, int64_t _tc1, uint64_t _now_us)
                 // Reset high RTT count after filter update
                 _high_rtt_count = 0;
             }
-
         }
-
     }
 }

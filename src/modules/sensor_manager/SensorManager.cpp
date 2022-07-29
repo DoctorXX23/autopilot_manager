@@ -55,7 +55,7 @@ SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
       _time_last_image{this->now()},
       _frequency_images("sensor images"),
       _frequency_camera_info("sensor camera_info"),
-      _frequency_odometry("sensor odometry") { }
+      _frequency_odometry("sensor odometry") {}
 
 SensorManager::~SensorManager() { deinit(); }
 
@@ -96,7 +96,8 @@ void SensorManager::init() {
     _tf_depth_filter.registerCallback(&SensorManager::handle_incoming_depth_image, this);
     _tf_depth_filter.setTolerance(rclcpp::Duration(0, static_cast<int>(10 * 1E6)));
 
-    _vehicle_status_pub = this->create_publisher<px4_msgs::msg::VehicleStatus>("vehicle_status/out", 10);  // for bagger in MAVLink mode
+    _vehicle_status_pub =
+        this->create_publisher<px4_msgs::msg::VehicleStatus>("vehicle_status/out", 10);  // for bagger in MAVLink mode
 }
 
 auto SensorManager::deinit() -> void { _depth_img_camera_info_sub.reset(); }
@@ -132,16 +133,14 @@ auto SensorManager::run() -> void {
 
     _telemetry->subscribe_armed([this](bool _armed) {
         px4_msgs::msg::VehicleStatus msg;
-        if ( _armed ) {
+        if (_armed) {
             msg.arming_state = px4_msgs::msg::VehicleStatus::ARMING_STATE_ARMED;
-        }
-        else {
+        } else {
             msg.arming_state = px4_msgs::msg::VehicleStatus::ARMING_STATE_STANDBY;
         }
 
-        _vehicle_status_pub->publish(msg); // Send data for bagger
+        _vehicle_status_pub->publish(msg);  // Send data for bagger
     });
-
 
     _mavlink_passthrough->subscribe_message_async(MAVLINK_MSG_ID_TIMESYNC, [this](const mavlink_message_t& _message) {
         mavlink_timesync_t tsync;
@@ -268,7 +267,7 @@ void SensorManager::health_check() {
     static rclcpp::Time time_start = now;
 
     const auto s_since_start = (now - time_start).seconds();
-    if ( s_since_start < 5.0 ) {
+    if (s_since_start < 5.0) {
         return;
     }
 
@@ -298,22 +297,19 @@ void SensorManager::health_check() {
         }
 
         RCLCPP_ERROR(get_logger(), ss.str());
-        if ( _server_utility ) {
+        if (_server_utility) {
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
         }
-    }
-    else if (!health_reported_once) {
+    } else if (!health_reported_once) {
         health_reported_once = true;
         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Notice,
-                "Safe Landing: Input healthy. Good to go!");
+                                          "Safe Landing: Input healthy. Good to go!");
     }
-
 
     mavlink_timesync_t timesync_message;
     timesync_message.ts1 = this->now().nanoseconds();
 
     mavlink_message_t message_out;
-    mavlink_msg_timesync_encode(1, MAV_COMP_ID_ONBOARD_COMPUTER3, &message_out,
-                                                           &timesync_message);
+    mavlink_msg_timesync_encode(1, MAV_COMP_ID_ONBOARD_COMPUTER3, &message_out, &timesync_message);
     _mavlink_passthrough->send_message(message_out);
 }

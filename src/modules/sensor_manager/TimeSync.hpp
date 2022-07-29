@@ -50,8 +50,8 @@ static constexpr double ALPHA_GAIN_FINAL = 0.003;
 static constexpr double BETA_GAIN_FINAL = 0.003;
 
 static constexpr uint32_t CONVERGENCE_WINDOW = 250;
-static constexpr uint64_t MAX_RTT_SAMPLE = 10*1000;
-static constexpr uint64_t MAX_DEVIATION_SAMPLE = 100*1000;
+static constexpr uint64_t MAX_RTT_SAMPLE = 10 * 1000;
+static constexpr uint64_t MAX_DEVIATION_SAMPLE = 100 * 1000;
 static constexpr uint32_t MAX_CONSECUTIVE_HIGH_DEVIATION = 5;
 
 class TimeSync {

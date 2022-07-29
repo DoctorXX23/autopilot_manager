@@ -89,7 +89,8 @@ void LandingManager::initParameters() {
     this->get_parameter_or("neg_peak_tresh", _mapper_parameter.neg_peak_tresh, 0.75f);
     this->get_parameter_or("pos_peak_tresh", _mapper_parameter.pos_peak_tresh, 0.19f);
     this->get_parameter_or("std_dev_tresh", _mapper_parameter.std_dev_tresh, 0.085f);
-    this->get_parameter_or("percentage_of_valid_samples_in_window", _mapper_parameter.percentage_of_valid_samples_in_window, 0.7f);
+    this->get_parameter_or("percentage_of_valid_samples_in_window",
+                           _mapper_parameter.percentage_of_valid_samples_in_window, 0.7f);
     this->get_parameter_or("voxel_size_m", _mapper_parameter.voxel_size_m, 0.1f);
 }
 
@@ -216,13 +217,12 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
             healthy = false;
 
             RCLCPP_ERROR(get_logger(), ss.str());
-            if ( _server_utility ) {
+            if (_server_utility) {
                 _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
             }
 
             last_warning = now;
         }
-
     }
 
     return healthy;
