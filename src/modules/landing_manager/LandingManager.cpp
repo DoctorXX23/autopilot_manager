@@ -91,9 +91,6 @@ void LandingManager::initParameters() {
     this->get_parameter_or("std_dev_tresh", _mapper_parameter.std_dev_tresh, 0.085f);
     this->get_parameter_or("percentage_of_valid_samples_in_window", _mapper_parameter.percentage_of_valid_samples_in_window, 0.7f);
     this->get_parameter_or("voxel_size_m", _mapper_parameter.voxel_size_m, 0.1f);
-
-    std::cout << landingManagerOut << " Square size: " << _mapper_parameter.window_size_m
-              << " | Distance to ground: " << _mapper_parameter.search_altitude_m << std::endl;
 }
 
 void LandingManager::updateParameters() {
@@ -109,9 +106,6 @@ void LandingManager::updateParameters() {
         !setSearchWindow_m(_landing_manager_config.safe_landing_area_square_size)) {
         _mapper_parameter.window_size_m = 2.0f;
     }
-
-    // std::cout << landingManagerOut << "Square size: " << __mapper_parameter.window_size_m
-    //           << " | Distance to ground: " << _landing_manager_config.safe_landing_distance_to_ground << std::endl;
 }
 
 void LandingManager::init() {
