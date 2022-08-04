@@ -68,7 +68,7 @@ struct VehicleState {
     Eigen::Vector3f angular_velocity{NAN, NAN, NAN};
 };
 
-static constexpr auto landingManagerOut = "[Landing Manager]";
+static constexpr auto landingManagerOut = "[Landing Manager] ";
 
 class LandingManager : public rclcpp::Node, ModuleBase {
    public:

@@ -110,7 +110,7 @@ void LandingManager::updateParameters() {
 }
 
 void LandingManager::init() {
-    std::cout << landingManagerOut << " Started!" << std::endl;
+    std::cout << landingManagerOut << "Started!" << std::endl;
 
     initParameters();
     updateParameters();

@@ -60,8 +60,8 @@ SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
 SensorManager::~SensorManager() { deinit(); }
 
 void SensorManager::init() {
-    std::cout << sensorManagerOut << " Started!" << std::endl;
-    std::cout << sensorManagerOut << " Downsampling block size = " << _downsampline_block_size << std::endl;
+    std::cout << sensorManagerOut << "Started!" << std::endl;
+    std::cout << sensorManagerOut << "Downsampling block size = " << _downsampline_block_size << std::endl;
 
     bool sim;
     this->declare_parameter("sim");
@@ -197,7 +197,7 @@ void SensorManager::set_camera_static_tf(const double x, const double y, const d
 
     _static_tf_broadcaster.sendTransform(_camera_static_tf);
 
-    std::cout << sensorManagerOut << " Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw."
+    std::cout << sensorManagerOut << "Camera offset is [" << x << "m, " << y << "m] with " << yaw_deg << "° yaw."
               << std::endl;
 }
 

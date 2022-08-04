@@ -73,7 +73,7 @@
 #include <mavsdk/plugins/server_utility/server_utility.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
-inline static constexpr auto sensorManagerOut = "[Sensor  Manager]";
+inline static constexpr auto sensorManagerOut = "[Sensor Manager] ";
 
 class SensorManager : public rclcpp::Node, ModuleBase {
    public:
