@@ -302,8 +302,9 @@ void SensorManager::health_check() {
         }
     } else if (!health_reported_once) {
         health_reported_once = true;
-        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Notice,
-                                          "Safe Landing: Input healthy. Good to go!");
+        static const std::string good_to_go = "Safe Landing: Input healthy. Good to go!";
+        _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, good_to_go);
+        std::cout << sensorManagerOut << good_to_go << std::endl;
     }
 
     mavlink_timesync_t timesync_message;
