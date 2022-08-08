@@ -119,7 +119,8 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     Eigen::Vector2f _inverse_focal_length;
     Eigen::Vector2f _principal_point;
 
-    int16_t _downsampline_block_size;
+    int16_t _downsampling_block_size;
+    static constexpr float _downsampling_min_depth_to_use_m{0.2};
 
     tf2_ros::StaticTransformBroadcaster _static_tf_broadcaster;
     tf2_ros::TransformBroadcaster _tf_broadcaster;

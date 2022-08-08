@@ -45,7 +45,7 @@ using namespace std::chrono_literals;
 SensorManager::SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system)
     : Node("sensor_manager"),
       _mavsdk_system{std::move(mavsdk_system)},
-      _downsampline_block_size(4),
+      _downsampling_block_size(4),
       _static_tf_broadcaster(this),
       _tf_broadcaster(this),
       _tf_buffer(this->get_clock()),
@@ -61,7 +61,7 @@ SensorManager::~SensorManager() { deinit(); }
 
 void SensorManager::init() {
     std::cout << sensorManagerOut << "Started!" << std::endl;
-    std::cout << sensorManagerOut << "Downsampling block size = " << _downsampline_block_size << std::endl;
+    std::cout << sensorManagerOut << "Downsampling block size = " << _downsampling_block_size << std::endl;
 
     bool sim;
     this->declare_parameter("sim");
@@ -159,11 +159,11 @@ bool SensorManager::set_downsampler(const sensor_msgs::msg::Image::ConstSharedPt
     if (_imageDownsampler == nullptr) {
         if (msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1) {
             _imageDownsampler = ImageDownsamplerInterface::getInstance<uint16_t>(
-                msg->width, msg->height, _downsampline_block_size, _downsampline_block_size, 0.2);
+                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size, _downsampling_min_depth_to_use_m);
 
         } else if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1) {
             _imageDownsampler = ImageDownsamplerInterface::getInstance<float>(
-                msg->width, msg->height, _downsampline_block_size, _downsampline_block_size, 0.2);
+                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size, _downsampling_min_depth_to_use_m);
         } else {
             RCLCPP_ERROR(get_logger(), "Unhandled image encoding %s", msg->encoding.c_str());
             ret = false;
