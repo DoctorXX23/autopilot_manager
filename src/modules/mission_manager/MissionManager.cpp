@@ -664,10 +664,10 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
     bool should_initiate_landing = false;
     const landing_planner::LandingSearchState search_state = _landing_planner.state();
     if (search_state == landing_planner::LandingSearchState::SEARCH_ACTIVE &&
-        safe_landing_state == 3 /*eLandingMapperState::CAN_LAND*/) {
+        safe_landing_state == 3 /*eLandingMapperState::CAN_LAND*/ &&
+        _landing_planner.isValidCandidateSite({_current_pos_x, _current_pos_y})) {
         // Observed a safe place while searching for a landing site.
-        const bool success = _landing_planner.candidateSiteFoundAt({_current_pos_x, _current_pos_y});
-        // TODO investigate what happens if candidate is not valid.
+        _landing_planner.candidateSiteFoundAt({_current_pos_x, _current_pos_y});
     } else if (search_state == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
         if (safe_landing_state == 0 /*eLandingMapperState::UNHEALTHY*/ ||
             safe_landing_state == 1 /*eLandingMapperState::UNKNOWN*/ ||
