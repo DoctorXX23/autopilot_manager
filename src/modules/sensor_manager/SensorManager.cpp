@@ -159,11 +159,13 @@ bool SensorManager::set_downsampler(const sensor_msgs::msg::Image::ConstSharedPt
     if (_imageDownsampler == nullptr) {
         if (msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1) {
             _imageDownsampler = ImageDownsamplerInterface::getInstance<uint16_t>(
-                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size, _downsampling_min_depth_to_use_m);
+                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size,
+                _downsampling_min_depth_to_use_m);
 
         } else if (msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1) {
             _imageDownsampler = ImageDownsamplerInterface::getInstance<float>(
-                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size, _downsampling_min_depth_to_use_m);
+                msg->width, msg->height, _downsampling_block_size, _downsampling_block_size,
+                _downsampling_min_depth_to_use_m);
         } else {
             RCLCPP_ERROR(get_logger(), "Unhandled image encoding %s", msg->encoding.c_str());
             ret = false;
