@@ -82,7 +82,9 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
       _landing_latitude_deg{NAN},
       _landing_longitude_deg{NAN},
       _landing_altitude_m{NAN},
-      _landing_waypoint_id{-1} {}
+      _landing_waypoint_id{-1},
+      _time_last_traj{this->now()},
+      _got_traj{true} {}
 
 MissionManager::~MissionManager() { deinit(); }
 
@@ -139,6 +141,7 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         return;
     }
 
+    _time_last_traj = this->now();
 
     if ( std::isfinite(_new_latitude) ) {
         mavlink_trajectory_representation_waypoints_t wp_message;
@@ -399,6 +402,17 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
     mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
     if (safe_landing_enabled) {
+        const auto ros_now = this->get_clock()->now();
+        const auto s_since_last_traj = (ros_now - _time_last_traj).seconds();
+        const bool get_traj = s_since_last_traj < 0.5f ;
+
+        if (_got_traj && !get_traj) {
+            _got_traj = false;
+        }
+        else if (get_traj) {
+            _got_traj = true;
+        }
+
         mavlink_message_t new_heartbeat_message;
         mavlink_heartbeat_t heartbeat;
         heartbeat.system_status = MAV_STATE_ACTIVE;
@@ -485,7 +499,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         std::cout << status << std::endl;
 
                     } else if (safe_landing_on_no_safe_land == "LANDING_SITE_SEARCH") {
-                        if (_global_origin_reference_set) {
+                        if (_global_origin_reference_set && _got_traj ) {
                             std::cout << "*" << std::endl
                                       << "***" << std::endl
                                       << "***** Starting Landing Site Search" << std::endl
@@ -508,7 +522,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                             // Start search
                             _landing_planner.startSearch(_current_pos_x, _current_pos_y, _current_yaw,
-                                                         _current_altitude_amsl, lp_config);
+                                                         -_current_pos_z, lp_config);
 
                             // set landing waypoint to check in case landing detection is not reported over MAVSDK
                             _landing_waypoint_id = progress.current;
@@ -551,18 +565,27 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                     std::string(missionManagerOut) + "Landing planner could not start. Holding position...";
                                 _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
                             }
-
-                            std::cout << status << std::endl;
-                        } else {
+                        } else if (!_global_origin_reference_set) {
                             // Planner did not start correctly.
                             _action->hold();
+                            landing_site_search_has_ended("No GO");
 
                             status = std::string(missionManagerOut) +
                                      "Global position reference not set. Holding position...";
                             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error,
                                                               status);
                         }
+                        else if (!_got_traj) {
+                            _action->hold();
+                            landing_site_search_has_ended("No OA");
 
+                            status = std::string(missionManagerOut) +
+                                     "Landing planner could not start. No OA active in PX4. Holding position...";
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error,
+                                                              status);
+                        }
+
+                        std::cout << status << std::endl;
                     } else if (safe_landing_on_no_safe_land == "GO_TO_WAYPOINT_XYZ") {
                         _action->hold();
 
@@ -713,7 +736,6 @@ void MissionManager::change_mission_wp_location(mavsdk::MissionRaw::MissionItem&
 }
 
 void MissionManager::change_missions_landing_site_to_current(const mavsdk::MissionRaw::MissionProgress& _progress) {
-
     const mavsdk::geometry::CoordinateTransformation::GlobalCoordinate global_waypoint =
         get_global_position_from_local_position({_current_pos_x, _current_pos_y});
 
