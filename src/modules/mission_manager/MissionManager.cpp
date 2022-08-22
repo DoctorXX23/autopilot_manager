@@ -183,14 +183,35 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
 
         _mavlink_passthrough->send_message(out_message);
     } else {
-        mavlink_trajectory_representation_waypoints_t wp_message;
-        mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
+        mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
-        mavlink_message_t out_message;
-        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &out_message,
+        const bool is_in_mission = _flight_mode == mavsdk::Telemetry::FlightMode::Mission;
+        const bool is_curr_landing_state_on_ground = _landed_state == mavsdk::Telemetry::LandedState::OnGround;
+        const bool is_prev_landing_state_landing = _previous_landed_state == mavsdk::Telemetry::LandedState::Landing;
+        const bool is_mission_over = progress.current >= progress.total-1; // -1 needed, as MAVSDK not always counts correctly
+
+        const bool is_on_ground_after_mission = is_in_mission
+                                             && is_curr_landing_state_on_ground
+                                             && is_prev_landing_state_landing
+                                             && is_mission_over;
+
+//        std::cout << "test " << __LINE__
+//                  << " flight mode='" << _flight_mode << "'"
+//                  << " landed state='" << _landed_state << "'"
+//                  << " prev landed state='" << _previous_landed_state << "'"
+//                  << " mission prog " <<  progress.current
+//                  << "/" <<  progress.total
+//                  << std::endl;
+
+        if ( !is_on_ground_after_mission ) { // not sent after a mission on ground to disarm
+            mavlink_trajectory_representation_waypoints_t wp_message;
+            mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
+
+            mavlink_message_t out_message;
+            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &out_message,
                                                                &wp_message);
-
-        _mavlink_passthrough->send_message(out_message);
+            _mavlink_passthrough->send_message(out_message);
+        }
     }
 }
 
@@ -1116,7 +1137,13 @@ void MissionManager::decision_maker_run() {
 
     // Get the landing state so we know when the vehicle is in-air, landing or on-ground
     _telemetry->subscribe_landed_state(
-        [this](mavsdk::Telemetry::LandedState landed_state) { _landed_state = landed_state; });
+        [this](mavsdk::Telemetry::LandedState landed_state) {
+            if ( landed_state != _landed_state) {
+                _previous_landed_state = _landed_state.load();
+                _landed_state = landed_state;
+            }
+        }
+    );
 
     while (!int_signal) {
         // Update configuration at each iteration

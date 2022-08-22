@@ -202,6 +202,7 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     std::atomic<bool> _action_triggered;
     std::atomic<mavsdk::Telemetry::FlightMode> _flight_mode{mavsdk::Telemetry::FlightMode::Unknown};
     std::atomic<mavsdk::Telemetry::LandedState> _landed_state{mavsdk::Telemetry::LandedState::Unknown};
+    std::atomic<mavsdk::Telemetry::LandedState> _previous_landed_state{mavsdk::Telemetry::LandedState::Unknown};
     std::atomic<bool> _is_global_position_ok;
     std::atomic<bool> _is_home_position_ok;
     std::atomic<bool> _get_gps_origin_success;
