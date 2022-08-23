@@ -83,7 +83,8 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, ma
       _landing_altitude_m{NAN},
       _landing_waypoint_id{-1},
       _time_last_traj{this->now()},
-      _got_traj{true} {}
+      _got_traj{true},
+      _frequency_traj("traj in") {}
 
 MissionManager::~MissionManager() { deinit(); }
 
@@ -213,6 +214,8 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             _mavlink_passthrough->send_message(out_message);
         }
     }
+    _frequency_traj.tic();
+
 }
 
 void MissionManager::set_global_position_reference() {

@@ -19,13 +19,16 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 
 find_package(landing_mapper REQUIRED)
 find_package(landing_planner REQUIRED)
+find_package(timing_tools REQUIRED)
 
 add_library(
     mission-manager SHARED
     MissionManager.cpp
     CustomActionHandler.cpp
 )
-
+ament_target_dependencies(mission-manager
+  timing_tools
+)
 target_link_libraries(mission-manager
     MAVSDK::mavsdk_action
     MAVSDK::mavsdk_custom_action

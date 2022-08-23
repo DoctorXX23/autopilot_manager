@@ -48,6 +48,7 @@
 #include <iostream>
 #include <landing_planner/LandingPlanner.hpp>
 #include <string>
+#include <timing_tools/timing_tools.h>
 
 // MAVSDK dependencies
 #include <mavsdk/geometry.h>
@@ -253,4 +254,6 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     rclcpp::Time _time_last_traj;
 
     bool _got_traj;
+
+    timing_tools::FrequencyMeter _frequency_traj;
 };
