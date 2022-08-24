@@ -180,6 +180,8 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     void change_missions_landing_site_to_current(const mavsdk::MissionRaw::MissionProgress& _progress);
     void restore_missions_landing_site_to_current(const std::string& _debug);
 
+    void send_corrected_trajectory();
+
     std::function<MissionManagerConfiguration()> _config_update_callback;
     std::function<float()> _distance_to_obstacle_update_callback;
     std::function<uint8_t()> _landing_condition_state_update_callback;
@@ -256,4 +258,7 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     bool _got_traj;
 
     timing_tools::FrequencyMeter _frequency_traj;
+
+    rclcpp::TimerBase::SharedPtr _timer_send_corrected_trajectory;
+    mavlink_message_t _corrected_traj_message;
 };
