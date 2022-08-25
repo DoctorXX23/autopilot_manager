@@ -58,7 +58,6 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, ma
       _mavsdk{mavsdk},
       _mavsdk_system{std::move(mavsdk_system)},
       _action_triggered{false},
-      _get_gps_origin_success{false},
       _global_origin_reference_set{false},
       _is_stationary_debounce_counter{0},
       _current_latitude{0.0},
@@ -166,8 +165,6 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         mavlink_trajectory_representation_waypoints_t wp_message;
         mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-        static int current_i = 0;
-
         const float d_x = abs(_current_pos_x - _new_x);
         const float d_y = abs(_current_pos_y - _new_y);
 
@@ -198,7 +195,6 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
 
         mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &_corrected_traj_message,
                                                                &wp_message);
-
     } else {
         mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
@@ -233,49 +229,62 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
 }
 
 void MissionManager::set_global_position_reference() {
-    bool result{false};
-    std::string status{};
-
-    while (!_get_gps_origin_success && !int_signal) {
+    while (!int_signal) {
+        std::string status{};
         // Get global origin to set the reference global position
         auto cmd_result = _telemetry->get_gps_global_origin();
 
         if (cmd_result.first == mavsdk::Telemetry::Result::Success) {
-            std::cout << std::string(missionManagerOut) + "Successfully received a GPS_GLOBAL_ORIGIN MAVLink message"
-                      << std::endl;
-            _get_gps_origin_success = true;
+            if (!_global_origin_reference_set) {
+                std::cout << std::string(missionManagerOut)
+                          << "Successfully received a GPS_GLOBAL_ORIGIN MAVLink message"
+                          << std::endl;
+            }
 
-            if (cmd_result.second.latitude_deg != 0.0 && cmd_result.second.longitude_deg != 0.0) {
-                _ref_latitude = cmd_result.second.latitude_deg;
-                _ref_longitude = cmd_result.second.longitude_deg;
-                _ref_altitude = cmd_result.second.altitude_m;
+            const bool lat_valid = cmd_result.second.latitude_deg != 0.0;
+            const bool lon_valid = cmd_result.second.longitude_deg != 0.0;
 
-                status = std::string(missionManagerOut) +
-                         "Global position reference initialiazed: Latitude: " + std::to_string(_ref_latitude) +
-                         " deg | Longitude: " + std::to_string(_ref_longitude) +
-                         " deg | Altitude (AMSL): " + std::to_string(_ref_altitude) + " meters";
-                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+            if (lat_valid && lon_valid) {
+                const bool lat_changed = _ref_latitude.load() != cmd_result.second.latitude_deg;
+                const bool lon_changed = _ref_longitude.load() != cmd_result.second.longitude_deg;
+                const bool alt_changed = _ref_altitude.load() != cmd_result.second.altitude_m;
 
-                result = true;
+                const bool ori_changed = lat_changed || lon_changed || alt_changed;
 
+                if ( ori_changed ) {
+                    _ref_latitude.store(cmd_result.second.latitude_deg);
+                    _ref_longitude.store(cmd_result.second.longitude_deg);
+                    _ref_altitude.store(cmd_result.second.altitude_m);
+
+                    status = std::string(missionManagerOut) +
+                             "Global position reference set: Latitude: " + std::to_string(_ref_latitude) +
+                             " deg | Longitude: " + std::to_string(_ref_longitude) +
+                             " deg | Altitude (AMSL): " + std::to_string(_ref_altitude) + " meters";
+                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
+
+                    _global_origin_reference_set = true;
+                }
             } else {
-                status = std::string(missionManagerOut) +
-                         "Failed to set the global origin reference because the received values are invalid.";
-                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error, status);
+                if (!_global_origin_reference_set) {
+                    status = std::string(missionManagerOut) +
+                             "Failed to set the global origin reference because the received values are invalid.";
+                }
             }
 
         } else if (cmd_result.first == mavsdk::Telemetry::Result::Timeout) {
-            std::cout << std::string(missionManagerOut) +
-                             "GPS_GLOBAL_ORIGIN stream request timeout. Message not yet received. Retrying..."
-                      << std::endl;
+            status = std::string(missionManagerOut) +
+                     "GPS_GLOBAL_ORIGIN stream request timeout. Message not yet received. Retrying...";
         } else {
-            std::cout << std::string(missionManagerOut) + "GPS_GLOBAL_ORIGIN stream request failed. Retrying..."
-                      << std::endl;
+            status = std::string(missionManagerOut) +
+                     "GPS_GLOBAL_ORIGIN stream request failed. Retrying...";
         }
+
+        if ( status != "") {
+            std::cout << status << std::endl;
+        }
+        std::this_thread::sleep_for(1s);
     }
 
-    std::cout << status << std::endl;
-    _global_origin_reference_set = result;
 }
 
 mavsdk::geometry::CoordinateTransformation::LocalCoordinate MissionManager::get_local_position_from_local_offset(
