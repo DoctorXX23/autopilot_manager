@@ -414,7 +414,8 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                             if (_landing_planner.isActive()) {
                                 // Lower the maximum speed
-                                mavsdk::Action::Result result = _action->set_maximum_speed(landing_site_search_max_speed);
+                                mavsdk::Action::Result result =
+                                    _action->set_maximum_speed(landing_site_search_max_speed);
                                 if (result == mavsdk::Action::Result::Success) {
                                     std::cout << std::string(missionManagerOut) << "Lowering maximum speed from "
                                               << _original_max_speed << " to " << landing_site_search_max_speed
@@ -446,9 +447,10 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                 _action->hold();
                                 landing_site_search_has_ended("NSC");
 
-                                status =
-                                    std::string(missionManagerOut) + "Landing planner could not start. Holding position...";
-                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
+                                status = std::string(missionManagerOut) +
+                                         "Landing planner could not start. Holding position...";
+                                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning,
+                                                                  status);
                             }
 
                             std::cout << status << std::endl;
@@ -458,8 +460,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                             status = std::string(missionManagerOut) +
                                      "Global position reference not set. Holding position...";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error,
-                                                              status);
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error, status);
                         }
 
                     } else if (safe_landing_on_no_safe_land == "GO_TO_WAYPOINT_XYZ") {
