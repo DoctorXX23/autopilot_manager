@@ -131,25 +131,7 @@ void MissionManager::run() {
     _mavlink_passthrough->subscribe_message_async(MAVLINK_MSG_ID_TRAJECTORY_REPRESENTATION_WAYPOINTS,
                                                   std::bind(&MissionManager::on_mavlink_trajectory_message, this, _1));
 
-    mavlink_trajectory_representation_waypoints_t wp_message;
-    wp_message.valid_points = 1;
-    wp_message.pos_x[0] = 0;
-    wp_message.pos_y[0] = 0;
-    wp_message.pos_z[0] = 0;
-    wp_message.pos_yaw[0] = 0;
-    wp_message.vel_x[0] = NAN;
-    wp_message.vel_y[0] = NAN;
-    wp_message.vel_z[0] = NAN;
-    mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &_corrected_traj_message,
-                                                           &wp_message);
-
-    _timer_send_corrected_trajectory = create_wall_timer(100ms, std::bind(&MissionManager::send_corrected_trajectory, this));
-
     rclcpp::spin(shared_from_this());
-}
-
-void MissionManager::send_corrected_trajectory() {
-    _mavlink_passthrough->send_message(_corrected_traj_message);
 }
 
 void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _message) {
@@ -193,8 +175,10 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         wp_message.vel_y[0] = -vel.y();
         wp_message.vel_z[0] = NAN;
 
-        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &_corrected_traj_message,
+        mavlink_message_t corrected_traj_message;
+        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &corrected_traj_message,
                                                                &wp_message);
+        _mavlink_passthrough->send_message(corrected_traj_message);
     } else {
         mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
@@ -202,7 +186,6 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         const bool is_curr_landing_state_on_ground = _landed_state == mavsdk::Telemetry::LandedState::OnGround;
         const bool is_prev_landing_state_landing = _previous_landed_state == mavsdk::Telemetry::LandedState::Landing;
         const bool is_mission_over = progress.current >= progress.total-1; // -1 needed, as MAVSDK not always counts correctly
-
         const bool is_on_ground_after_mission = is_in_mission
                                              && is_curr_landing_state_on_ground
                                              && is_prev_landing_state_landing
@@ -220,8 +203,17 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             mavlink_trajectory_representation_waypoints_t wp_message;
             mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &_corrected_traj_message,
+            mavlink_message_t forwarded_traj_message;
+            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &forwarded_traj_message,
                                                                &wp_message);
+            _mavlink_passthrough->send_message(forwarded_traj_message);
+        }
+        else {
+            std::cout << "no traj send. On ground after landing a mission " << std::endl;
+            std::cout << "no traj send. On ground after landing a mission " << std::endl;
+            std::cout << "no traj send. On ground after landing a mission " << std::endl;
+            std::cout << "no traj send. On ground after landing a mission " << std::endl;
+            std::cout << "no traj send. On ground after landing a mission " << std::endl;
         }
     }
     _frequency_traj.tic();
