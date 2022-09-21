@@ -841,11 +841,11 @@ void MissionManager::restore_missions_landing_site_to_current(const std::string&
     std::tie(result, mission) = _mission_raw->download_mission();
     mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
-    std::cout << "mission (" << progress.current << "/" << progress.total << ")" << std::endl;
-    for (const auto& item : mission) {
-        std::cout << "- " << item << std::endl;
-    }
-    std::cout << std::endl;
+//    std::cout << "mission (" << progress.current << "/" << progress.total << ")" << std::endl;
+//    for (const auto& item : mission) {
+//        std::cout << "- " << item << std::endl;
+//    }
+//    std::cout << std::endl;
 
     int id = progress.current - 1;
     if (progress.current + 1 == progress.total) {
@@ -865,18 +865,18 @@ void MissionManager::restore_missions_landing_site_to_current(const std::string&
         landing_wp = &mission[id + 1];
     }
 
-    std::cout << "Reset" << std::endl;
-    std::cout << *landing_wp << std::endl;
+//    std::cout << "Reset" << std::endl;
+//    std::cout << *landing_wp << std::endl;
 
     change_mission_wp_location(*landing_wp, _landing_latitude_deg, _landing_longitude_deg, _landing_altitude_m);
 
-    std::cout << "to" << std::endl;
-    std::cout << *landing_wp << std::endl;
-
-    std::cout << "mission now (" << progress.current << "/" << progress.total << ")" << std::endl;
-    for (const auto& item : mission) {
-        std::cout << "- " << item << std::endl;
-    }
+//    std::cout << "to" << std::endl;
+//    std::cout << *landing_wp << std::endl;
+//
+//    std::cout << "mission now (" << progress.current << "/" << progress.total << ")" << std::endl;
+//    for (const auto& item : mission) {
+//        std::cout << "- " << item << std::endl;
+//    }
 
     _mission_raw->upload_mission(mission);
 
