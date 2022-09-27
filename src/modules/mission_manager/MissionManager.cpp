@@ -186,20 +186,12 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         const bool is_curr_landing_state_on_ground = _landed_state == mavsdk::Telemetry::LandedState::OnGround;
         const bool is_prev_landing_state_landing = _previous_landed_state == mavsdk::Telemetry::LandedState::Landing;
         const bool is_mission_over = progress.current >= progress.total-1; // -1 needed, as MAVSDK not always counts correctly
-        const bool is_on_ground_after_mission = is_in_mission
-                                             && is_curr_landing_state_on_ground
-                                             && is_prev_landing_state_landing
-                                             && is_mission_over;
+        const bool is_safe_landing_ended = _landing_planner.state() == landing_planner::LandingSearchState::ENDED;
+        const bool is_on_ground_after_mission_with_safe_landing = is_in_mission && is_curr_landing_state_on_ground &&
+                                                                  is_prev_landing_state_landing && is_mission_over &&
+                                                                  is_safe_landing_ended;
 
-//        std::cout << "test " << __LINE__
-//                  << " flight mode='" << _flight_mode << "'"
-//                  << " landed state='" << _landed_state << "'"
-//                  << " prev landed state='" << _previous_landed_state << "'"
-//                  << " mission prog " <<  progress.current
-//                  << "/" <<  progress.total
-//                  << std::endl;
-
-        if ( !is_on_ground_after_mission ) { // not sent after a mission on ground to disarm
+        if (!is_on_ground_after_mission_with_safe_landing) {
             mavlink_trajectory_representation_waypoints_t wp_message;
             mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
@@ -207,17 +199,27 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &forwarded_traj_message,
                                                                &wp_message);
             _mavlink_passthrough->send_message(forwarded_traj_message);
-        }
-        else {
-            std::cout << "no traj send. On ground after landing a mission " << std::endl;
-            std::cout << "no traj send. On ground after landing a mission " << std::endl;
-            std::cout << "no traj send. On ground after landing a mission " << std::endl;
-            std::cout << "no traj send. On ground after landing a mission " << std::endl;
-            std::cout << "no traj send. On ground after landing a mission " << std::endl;
+        } else {
+            // If safe landing kicks in during the final landing of a mission, the mode does not automatically switch to
+            // Hold once on th ground. We must manually trigger the mode change in order to complete the mission and
+            // trigger a disarm.
+            std::cout << std::string(missionManagerOut)
+                      << "Landed at end of mission with Safe Landing. Issuing Hold command..." << std::endl;
+            std::function<void(mavsdk::Action::Result)> hold_callback = [](mavsdk::Action::Result result) {
+                std::cout << "Hold command issued with result " << result << std::endl;
+            };
+            _action->hold_async(hold_callback);
         }
     }
     _frequency_traj.tic();
 
+    // mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
+    // std::cout << "OA TEST :: "
+    //           << " flight mode='" << _flight_mode << "'"
+    //           << " landed state='" << _landed_state << "'"
+    //           << " prev landed state='" << _previous_landed_state << "'"
+    //           << " mission prog " << progress.current << "/" << progress.total << std::endl;
+    // std::cout << "SL planner state = " << _landing_planner.state() << std::endl;
 }
 
 void MissionManager::set_global_position_reference() {
