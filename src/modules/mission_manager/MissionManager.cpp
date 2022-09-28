@@ -754,6 +754,9 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 update_landing_site_search(safe_landing_state, height_above_obstacle,
                                            safe_landing_try_landing_after_action);
             }
+
+            // Record the last time an action has been commanded based on the landing planner
+            _last_time = now;
         } else if (_landing_planner.isEnded() && _landed_state == mavsdk::Telemetry::LandedState::TakingOff) {
             // Reset landing site search on take-off.
             // NOTE: We do the same on a mode change, but this is necessary for mid-mission landings.
@@ -832,7 +835,6 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         // End of search pattern.
         // Hold position.
         status += "End of landing site search. Holding position...";
-        set_new_local_waypoint(NAN, NAN, NAN);
         mavsdk::Action::Result result = _action->hold();
         if (result == mavsdk::Action::Result::Success) {
             std::cout << std::string(missionManagerOut) << "Switched to HOLD mode." << std::endl;
@@ -878,7 +880,6 @@ void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
     // Unset the waypoint override
     set_new_local_waypoint(NAN, NAN, NAN);
 
-    _action_triggered = false;
     std::cout << "    *" << std::endl
               << "  ***" << std::endl
               << "***** Landing Site Search has ended" << std::endl
@@ -1027,10 +1028,10 @@ void MissionManager::decision_maker_run() {
             }
 
             // After an action is triggered, we give it 5 seconds to process it before retrying.
-            // Except the landing site search, which must terminate itself.
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(now - _last_time).count() >= 5000 &&
-                !_landing_planner.isActive()) {
+            if (_action_triggered &&
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - _last_time).count() >= 5000) {
                 _action_triggered = false;
+                std::cout << missionManagerOut << "5 seconds have passed since last action." << std::endl;
             }
         }
 
