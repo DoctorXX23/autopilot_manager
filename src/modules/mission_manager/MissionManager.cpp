@@ -344,11 +344,6 @@ void MissionManager::set_new_waypoint(const double& lat, const double& lon, cons
     _new_longitude = lon;
     _new_altitude_amsl = alt_amsl;
 }
-void MissionManager::set_new_local_waypoint(const double& x, const double& y, const double& yaw) {
-    _new_x = x;
-    _new_y = y;
-    _new_yaw = yaw;
-}
 
 bool MissionManager::arrived_to_new_waypoint() {
     if ((std::abs(_new_latitude - _current_latitude) <= 1.0E-5) &&
@@ -358,6 +353,18 @@ bool MissionManager::arrived_to_new_waypoint() {
     }
 
     return false;
+}
+
+void MissionManager::set_new_local_waypoint(const double& x, const double& y, const double& yaw) {
+    // Set a waypoint that the OA interface should send to PX4
+    _new_x = x;
+    _new_y = y;
+    _new_yaw = yaw;
+}
+
+void MissionManager::go_to_new_local_waypoint(
+    mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint) {
+    set_new_local_waypoint(local_waypoint.north_m, local_waypoint.east_m, _current_yaw);
 }
 
 bool MissionManager::is_stationary() {
@@ -406,21 +413,9 @@ bool MissionManager::under_manual_control() {
     }
 }
 
-void MissionManager::go_to_new_local_waypoint(
-    mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint, const double altitude,
-    const double yaw_rad) {
-    // Convert to global position
-    const mavsdk::geometry::CoordinateTransformation::GlobalCoordinate waypoint =
-        get_global_position_from_local_position(local_waypoint);
-
-    // Go to waypoint
-    set_new_local_waypoint(local_waypoint.north_m, local_waypoint.east_m, _current_yaw);
-}
-
 void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now) {
     std::unique_lock<std::mutex> lock(mission_manager_config_mtx);
     const bool safe_landing_enabled = _mission_manager_config.safe_landing_enabled;
-    const float safe_landing_distance_to_ground = _mission_manager_config.safe_landing_distance_to_ground;
     const bool safe_landing_try_landing_after_action = _mission_manager_config.safe_landing_try_landing_after_action;
     const std::string safe_landing_on_no_safe_land = _mission_manager_config.safe_landing_on_no_safe_land;
     const double landing_site_search_max_speed = _mission_manager_config.landing_site_search_max_speed;
@@ -582,20 +577,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                                 // Set the first waypoint in the search pattern
                                 const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
                                     _landing_planner.getCurrentWaypoint();
-                                go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(),
-                                                         _current_yaw * 180. / M_PI);
-
-                                // std::stringstream ss;
-                                // ss << missionManagerOut << "Landing site search started
-                                // at: Lat " << std::fixed
-                                //     << std::setprecision(6) << _new_latitude << "°, Lon "
-                                //     << _new_longitude << "°, Alt "
-                                //     << std::setprecision(2) << _new_altitude_amsl << "m
-                                //     AMSL, Local (" << new_wpt.north_m
-                                //     << ", " << new_wpt.east_m << ")" << std::endl;
-                                // status = ss.str();
-                                // _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info,
-                                // status);
+                                go_to_new_local_waypoint(new_wpt);
                             } else {
                                 // Planner did not start correctly.
                                 _action->hold();
@@ -798,9 +780,6 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
             std::cout << status << std::endl;
             _landing_planner.abortLanding(-_current_pos_z, height_above_obstacle);
-
-            // Debug output
-            std::cout << "safe_landing_state " << (int)safe_landing_state << std::endl;
         }
     } else if (safe_landing_state == 5 /*eLandingMapperState::TOO_HIGH*/) {
         // Adjust search altitude
@@ -839,7 +818,7 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         if (result == mavsdk::Action::Result::Success) {
             std::cout << std::string(missionManagerOut) << "Switched to HOLD mode." << std::endl;
         } else {
-            std::cout << std::string(missionManagerOut) << "Could not switched to HOLD mode." << std::endl;
+            std::cout << std::string(missionManagerOut) << "Could not switch to HOLD mode." << std::endl;
         }
         std::this_thread::sleep_for(500ms);
         _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
@@ -847,13 +826,11 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         // Command new waypoint
         const mavsdk::geometry::CoordinateTransformation::LocalCoordinate new_wpt =
             _landing_planner.getCurrentWaypoint();
-        go_to_new_local_waypoint(new_wpt, _landing_planner.getSearchAltitude(), _current_yaw * 180. / M_PI);
+        go_to_new_local_waypoint(new_wpt);
         std::stringstream ss;
         ss << "[Landing Site Search] Waypoint set: Local (" << new_wpt.north_m << ", " << new_wpt.east_m << ")";
         status += ss.str();
-        // _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
     } else {
-        status += "No change in behaviour";
         // No change in behaviour
         return;
     }

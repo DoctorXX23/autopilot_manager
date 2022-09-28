@@ -158,17 +158,18 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     void flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode);
 
     void set_global_position_reference();
+
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
-    void set_new_local_waypoint(const double& x, const double& y, const double& yaw);
     bool arrived_to_new_waypoint();
+
+    void set_new_local_waypoint(const double& x, const double& y, const double& yaw);
+    void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint);
+
     bool is_stationary();
     bool debounce_is_stationary(bool is_stationary);
 
     bool landing_triggered();
     bool under_manual_control();
-
-    void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint,
-                                  const double altitude, const double yaw_rad);
 
     mavsdk::geometry::CoordinateTransformation::LocalCoordinate get_local_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
