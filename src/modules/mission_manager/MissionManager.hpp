@@ -68,8 +68,7 @@ static constexpr auto missionManagerOut = "[Mission Manager] ";
 
 class MissionManager : public rclcpp::Node, ModuleBase {
    public:
-    MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, mavsdk::Mavsdk* mavsdk,
-                   const std::string& path_to_custom_action_file);
+    MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, const std::string& path_to_custom_action_file);
     ~MissionManager();
     MissionManager(const MissionManager&) = delete;
     auto operator=(const MissionManager&) -> const MissionManager& = delete;
@@ -178,10 +177,6 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
 
-    void change_mission_wp_location(mavsdk::MissionRaw::MissionItem& _wp, int32_t _x, int32_t _y, float _z) const;
-    void change_missions_landing_site_to_current(const mavsdk::MissionRaw::MissionProgress& _progress);
-    void restore_missions_landing_site_to_current(const std::string& _debug);
-
     std::function<MissionManagerConfiguration()> _config_update_callback;
     std::function<float()> _distance_to_obstacle_update_callback;
     std::function<uint8_t()> _landing_condition_state_update_callback;
@@ -193,11 +188,9 @@ class MissionManager : public rclcpp::Node, ModuleBase {
 
     std::mutex mission_manager_config_mtx;
 
-    std::shared_ptr<mavsdk::Mavsdk> _mavsdk;
     std::shared_ptr<mavsdk::System> _mavsdk_system;
     std::shared_ptr<CustomActionHandler> _custom_action_handler;
     std::shared_ptr<mavsdk::Action> _action;
-    std::shared_ptr<mavsdk::MissionRaw> _mission_raw;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
     std::shared_ptr<mavsdk::MavlinkPassthrough> _mavlink_passthrough;
@@ -243,14 +236,6 @@ class MissionManager : public rclcpp::Node, ModuleBase {
 
     std::thread _decision_maker_th;
     std::thread _global_origin_reference_th;
-
-    bool _was_mission_paused;
-    bool _was_landing_paused;
-
-    double _landing_latitude_deg;
-    double _landing_longitude_deg;
-    double _landing_altitude_m;
-    int _landing_waypoint_id;
 
     rclcpp::Time _time_last_traj;
 
