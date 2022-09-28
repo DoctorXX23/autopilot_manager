@@ -222,6 +222,40 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
     // std::cout << "SL planner state = " << _landing_planner.state() << std::endl;
 }
 
+void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode) {
+    if (flight_mode != _flight_mode) {
+        _flight_mode = flight_mode;
+
+        // Reset safe landing on new flights or when in manual control
+        const bool is_taking_off = _landed_state == mavsdk::Telemetry::LandedState::OnGround ||
+                                   _landed_state == mavsdk::Telemetry::LandedState::TakingOff;
+        const bool expecting_auto_takeoff = _flight_mode == mavsdk::Telemetry::FlightMode::Mission ||
+                                            _flight_mode == mavsdk::Telemetry::FlightMode::Takeoff;
+        const bool switched_to_manual_mode = under_manual_control();
+
+        // Determine reason for reset (or to not reset)
+        std::stringstream reason;
+        if (is_taking_off && expecting_auto_takeoff) {
+            reason << "Expecting take-off: mode changed to '" << _flight_mode << "' while '" << _landed_state << "'.";
+        } else if (switched_to_manual_mode) {
+            reason << "Changed to manual mode '" << _flight_mode << "'.";
+        } else {
+            // Don't reset
+            return;
+        }
+
+        // Do reset
+        if (_landing_planner.isActive()) {
+            // End search cleanly
+            std::cout << std::string(missionManagerOut) << "Ending Landing Site Search after flight mode change."
+                      << std::endl;
+            landing_site_search_has_ended("MODE");
+        }
+        std::cout << std::string(missionManagerOut) << "Resetting Landing Planner. " << reason.str() << std::endl;
+        _landing_planner.reset();
+    }
+}
+
 void MissionManager::set_global_position_reference() {
     while (!int_signal) {
         std::string status{};
@@ -764,6 +798,11 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                 update_landing_site_search(safe_landing_state, height_above_obstacle,
                                            safe_landing_try_landing_after_action);
             }
+        } else if (_landing_planner.isEnded() && _landed_state == mavsdk::Telemetry::LandedState::TakingOff) {
+            // Reset landing site search on take-off.
+            // NOTE: We do the same on a mode change, but this is necessary for mid-mission landings.
+            std::cout << std::string(missionManagerOut) << "Resetting Landing Planner on take-off" << std::endl;
+            _landing_planner.reset();
         } else if (std::isfinite(_new_latitude) && std::isfinite(_new_longitude) && std::isfinite(_new_altitude_amsl)) {
             if (arrived_to_new_waypoint()) {
                 std::cout << "[DEBUG] " << __FUNCTION__ << ":" << __LINE__ << std::endl;
@@ -976,7 +1015,6 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
         mavsdk::Action::Result result = _action->hold();
         if (result == mavsdk::Action::Result::Success) {
             std::cout << std::string(missionManagerOut) << "Switched to HOLD mode." << std::endl;
-            _flight_mode = mavsdk::Telemetry::FlightMode::Hold;
         } else {
             std::cout << std::string(missionManagerOut) << "Could not switched to HOLD mode." << std::endl;
         }
@@ -1153,7 +1191,7 @@ void MissionManager::decision_maker_run() {
 
     // Get the flight mode
     _telemetry->subscribe_flight_mode(
-        [this](mavsdk::Telemetry::FlightMode flight_mode) { _flight_mode = flight_mode; });
+        [this](mavsdk::Telemetry::FlightMode flight_mode) { flight_mode_callback(flight_mode); });
 
     // Get the landing state so we know when the vehicle is in-air, landing or on-ground
     _telemetry->subscribe_landed_state(

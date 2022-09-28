@@ -155,6 +155,7 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     void landing_site_search_has_ended(const std::string& _debug = "");
 
     void on_mavlink_trajectory_message(const mavlink_message_t& _message);
+    void flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode);
 
     void set_global_position_reference();
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
