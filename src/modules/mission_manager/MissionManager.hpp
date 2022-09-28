@@ -256,4 +256,6 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     bool _got_traj;
 
     timing_tools::FrequencyMeter _frequency_traj;
+
+    static constexpr bool DEBUG_PRINT{false};
 };

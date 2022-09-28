@@ -147,13 +147,6 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         mavlink_trajectory_representation_waypoints_t wp_message;
         mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-        const float d_x = abs(_current_pos_x - _new_x);
-        const float d_y = abs(_current_pos_y - _new_y);
-
-        std::cout << "[" << _current_pos_x << ", " << _current_pos_y << "] >>->> "
-                  << "[" << _new_x << ", " << _new_y << "]"
-                  << "  d_x=" << d_x << " d_y" << d_y << std::endl;
-
         const float vel_scale = 0.5f;  // TODO make this ROS parameter
 
         Eigen::Vector2f vel_new(_current_pos_x - _new_x, _current_pos_y - _new_y);
@@ -179,6 +172,17 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &corrected_traj_message,
                                                                &wp_message);
         _mavlink_passthrough->send_message(corrected_traj_message);
+
+        if (DEBUG_PRINT) {
+            const float d_x = abs(_current_pos_x - _new_x);
+            const float d_y = abs(_current_pos_y - _new_y);
+            std::stringstream debug_stream;
+            debug_stream << "[OA] " << std::fixed << std::setprecision(3) << "[" << _current_pos_x << ", "
+                         << _current_pos_y << "] >>->> "
+                         << "[" << _new_x << ", " << _new_y << "]"
+                         << "  d_x=" << d_x << " d_y" << d_y;
+            std::cout << debug_stream.str() << std::endl;
+        }
     } else {
         mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
@@ -213,13 +217,15 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
     }
     _frequency_traj.tic();
 
-    // mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
-    // std::cout << "OA TEST :: "
-    //           << " flight mode='" << _flight_mode << "'"
-    //           << " landed state='" << _landed_state << "'"
-    //           << " prev landed state='" << _previous_landed_state << "'"
-    //           << " mission prog " << progress.current << "/" << progress.total << std::endl;
-    // std::cout << "SL planner state = " << _landing_planner.state() << std::endl;
+    if (DEBUG_PRINT) {
+        mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
+        std::cout << "[OA] traj received:"
+                  << " flight mode='" << _flight_mode << "'"
+                  << " landed state='" << _landed_state << "'"
+                  << " prev landed state='" << _previous_landed_state << "'"
+                  << " mission prog=" << progress.current << "/" << progress.total << " safe landing='"
+                  << _landing_planner.state() << "'" << std::endl;
+    }
 }
 
 void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode) {
@@ -860,6 +866,15 @@ void MissionManager::change_missions_landing_site_to_current(const mavsdk::Missi
     _landing_longitude_deg = landing_wp->y;
     _landing_altitude_m = landing_wp->z;
 
+    if (DEBUG_PRINT) {
+        std::stringstream ss;
+        ss << "Changing mission landing waypoint: " << std::fixed << std::setprecision(7) << "["
+           << _landing_latitude_deg * 1e-7 << ", " << _landing_longitude_deg * 1e-7 << "] @ " << std::setprecision(3)
+           << _landing_altitude_m << "m --> " << std::setprecision(7) << "[" << global_waypoint.latitude_deg << ", "
+           << global_waypoint.longitude_deg << "] @ " << std::setprecision(3) << -_current_pos_z << "m";
+        std::cout << missionManagerOut << ss.str() << std::endl;
+    }
+
     change_mission_wp_location(*landing_wp, global_waypoint.latitude_deg * 10e6, global_waypoint.longitude_deg * 10e6,
                                -_current_pos_z);
 
@@ -882,12 +897,6 @@ void MissionManager::restore_missions_landing_site_to_current(const std::string&
     std::tie(result, mission) = _mission_raw->download_mission();
     mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
 
-//    std::cout << "mission (" << progress.current << "/" << progress.total << ")" << std::endl;
-//    for (const auto& item : mission) {
-//        std::cout << "- " << item << std::endl;
-//    }
-//    std::cout << std::endl;
-
     int id = progress.current - 1;
     if (progress.current + 1 == progress.total) {
         id = progress.current;
@@ -897,7 +906,7 @@ void MissionManager::restore_missions_landing_site_to_current(const std::string&
     }
 
     mavsdk::MissionRaw::MissionItem* landing_wp = &mission[id];
-    if (landing_wp->command != 21) {
+    if (landing_wp->command != 21 /* MAV_CMD_NAV_TAKEOFF */) {
         std::cout << "**************** " << __LINE__ << std::endl;
         std::cout << "*    WARNING   * " << __LINE__ << std::endl;
         std::cout << "**************** " << __LINE__ << std::endl;
@@ -906,18 +915,16 @@ void MissionManager::restore_missions_landing_site_to_current(const std::string&
         landing_wp = &mission[id + 1];
     }
 
-//    std::cout << "Reset" << std::endl;
-//    std::cout << *landing_wp << std::endl;
+    if (DEBUG_PRINT) {
+        std::stringstream ss;
+        ss << "Restoring mission landing waypoint: " << std::fixed << std::setprecision(7) << "["
+           << landing_wp->x * 1e-7 << ", " << landing_wp->y * 1e-7 << "] @ " << std::setprecision(3) << landing_wp->z
+           << "m --> " << std::setprecision(7) << "[" << _landing_latitude_deg * 1e-7 << ", "
+           << _landing_longitude_deg * 1e-7 << "] @ " << std::setprecision(3) << _landing_altitude_m << "m";
+        std::cout << missionManagerOut << ss.str() << std::endl;
+    }
 
     change_mission_wp_location(*landing_wp, _landing_latitude_deg, _landing_longitude_deg, _landing_altitude_m);
-
-//    std::cout << "to" << std::endl;
-//    std::cout << *landing_wp << std::endl;
-//
-//    std::cout << "mission now (" << progress.current << "/" << progress.total << ")" << std::endl;
-//    for (const auto& item : mission) {
-//        std::cout << "- " << item << std::endl;
-//    }
 
     _mission_raw->upload_mission(mission);
 
