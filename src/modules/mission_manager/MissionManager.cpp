@@ -144,77 +144,85 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
     const bool is_pos_valid = std::isfinite(_new_x) && std::isfinite(_new_y) && std::isfinite(_new_yaw);
     const bool is_valid = _landing_planner.isActive() && is_pos_valid;
     if (is_valid) {
+        // The Landing Planner wants to set an alternative waypoint.
+        // Construct and send the appropriate trajectory message.
         mavlink_trajectory_representation_waypoints_t wp_message;
         mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-        const float vel_scale = 0.5f;  // TODO make this ROS parameter
+        if (_landing_planner.state() == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
+            // Attempting to land: command a downward velocity
 
-        Eigen::Vector2f vel_new(_current_pos_x - _new_x, _current_pos_y - _new_y);
-        vel_new = vel_new.normalized() * vel_scale;
+            // Determine landing speed
+            const float height_above_obstacle = _height_above_obstacle_update_callback();
+            float land_velocity = 0.7;
+            if (height_above_obstacle < 1.) {
+                land_velocity = 0.3;
+            }
 
-        static Eigen::Vector2f vel(vel_new);
+            // Command the landing speed and position
+            wp_message.valid_points = 1;
+            wp_message.pos_x[0] = _new_x;
+            wp_message.pos_y[0] = _new_y;
+            wp_message.pos_z[0] = NAN;
+            wp_message.pos_yaw[0] = _new_yaw;
+            wp_message.vel_x[0] = NAN;
+            wp_message.vel_y[0] = NAN;
+            wp_message.vel_z[0] = land_velocity;
 
-        const float smoothing_factor = 0.9f;  // TODO make this ROS parameter
-        const float inv_smoothing_factor = 1.f - smoothing_factor;
+            if (DEBUG_PRINT) {
+                std::stringstream ss;
+                ss << "[OA] " << std::fixed << std::setprecision(3) << "Land: [" << _new_x << ", " << _new_y << "]"
+                   << "  v=" << land_velocity << "  h=" << height_above_obstacle;
+                std::cout << ss.str() << std::endl;
+            }
+        } else {
+            // Not landing: command a horizontal velocity to follow the search pattern
 
-        vel = vel * smoothing_factor + vel_new * inv_smoothing_factor;  // smoothing
+            const float vel_scale = 0.5f;  // TODO make this ROS parameter
 
-        wp_message.valid_points = 1;
-        wp_message.pos_x[0] = NAN;
-        wp_message.pos_y[0] = NAN;
-        wp_message.pos_z[0] = -_landing_planner.getSearchAltitude();
-        wp_message.pos_yaw[0] = _new_yaw;
-        wp_message.vel_x[0] = -vel.x();
-        wp_message.vel_y[0] = -vel.y();
-        wp_message.vel_z[0] = NAN;
+            Eigen::Vector2f vel_new(_current_pos_x - _new_x, _current_pos_y - _new_y);
+            vel_new = vel_new.normalized() * vel_scale;
+
+            static Eigen::Vector2f vel(vel_new);
+
+            const float smoothing_factor = 0.9f;  // TODO make this ROS parameter
+            const float inv_smoothing_factor = 1.f - smoothing_factor;
+
+            vel = vel * smoothing_factor + vel_new * inv_smoothing_factor;  // smoothing
+
+            wp_message.valid_points = 1;
+            wp_message.pos_x[0] = NAN;
+            wp_message.pos_y[0] = NAN;
+            wp_message.pos_z[0] = -_landing_planner.getSearchAltitude();
+            wp_message.pos_yaw[0] = _new_yaw;
+            wp_message.vel_x[0] = -vel.x();
+            wp_message.vel_y[0] = -vel.y();
+            wp_message.vel_z[0] = NAN;
+
+            if (DEBUG_PRINT) {
+                const float d_x = abs(_current_pos_x - _new_x);
+                const float d_y = abs(_current_pos_y - _new_y);
+                std::stringstream ss;
+                ss << "[OA] " << std::fixed << std::setprecision(3) << "[" << _current_pos_x << ", " << _current_pos_y
+                   << "] >>->> [" << _new_x << ", " << _new_y << "]  d_x=" << d_x << " d_y" << d_y;
+                std::cout << ss.str() << std::endl;
+            }
+        }
 
         mavlink_message_t corrected_traj_message;
         mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
                                                                &corrected_traj_message, &wp_message);
         _mavlink_passthrough->send_message(corrected_traj_message);
-
-        if (DEBUG_PRINT) {
-            const float d_x = abs(_current_pos_x - _new_x);
-            const float d_y = abs(_current_pos_y - _new_y);
-            std::stringstream debug_stream;
-            debug_stream << "[OA] " << std::fixed << std::setprecision(3) << "[" << _current_pos_x << ", "
-                         << _current_pos_y << "] >>->> "
-                         << "[" << _new_x << ", " << _new_y << "]"
-                         << "  d_x=" << d_x << " d_y" << d_y;
-            std::cout << debug_stream.str() << std::endl;
-        }
     } else {
-        mavsdk::MissionRaw::MissionProgress progress = _mission_raw->mission_progress();
+        // The Landing Planner is not active and an alternative wayppoint has not been set.
+        // Send the trajectory message back with no change.
+        mavlink_trajectory_representation_waypoints_t wp_message;
+        mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-        const bool is_in_mission = _flight_mode == mavsdk::Telemetry::FlightMode::Mission;
-        const bool is_curr_landing_state_on_ground = _landed_state == mavsdk::Telemetry::LandedState::OnGround;
-        const bool is_prev_landing_state_landing = _previous_landed_state == mavsdk::Telemetry::LandedState::Landing;
-        const bool is_mission_over =
-            progress.current >= progress.total - 1;  // -1 needed, as MAVSDK not always counts correctly
-        const bool is_safe_landing_ended = _landing_planner.state() == landing_planner::LandingSearchState::ENDED;
-        const bool is_on_ground_after_mission_with_safe_landing = is_in_mission && is_curr_landing_state_on_ground &&
-                                                                  is_prev_landing_state_landing && is_mission_over &&
-                                                                  is_safe_landing_ended;
-
-        if (!is_on_ground_after_mission_with_safe_landing) {
-            mavlink_trajectory_representation_waypoints_t wp_message;
-            mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
-
-            mavlink_message_t forwarded_traj_message;
-            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
-                                                                   &forwarded_traj_message, &wp_message);
-            _mavlink_passthrough->send_message(forwarded_traj_message);
-        } else {
-            // If safe landing kicks in during the final landing of a mission, the mode does not automatically switch to
-            // Hold once on th ground. We must manually trigger the mode change in order to complete the mission and
-            // trigger a disarm.
-            std::cout << std::string(missionManagerOut)
-                      << "Landed at end of mission with Safe Landing. Issuing Hold command..." << std::endl;
-            std::function<void(mavsdk::Action::Result)> hold_callback = [](mavsdk::Action::Result result) {
-                std::cout << "Hold command issued with result " << result << std::endl;
-            };
-            _action->hold_async(hold_callback);
-        }
+        mavlink_message_t forwarded_traj_message;
+        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
+                                                               &forwarded_traj_message, &wp_message);
+        _mavlink_passthrough->send_message(forwarded_traj_message);
     }
     _frequency_traj.tic();
 
@@ -983,25 +991,9 @@ void MissionManager::update_landing_site_search(const uint8_t safe_landing_state
     std::string status = std::string(missionManagerOut);
     if (should_initiate_landing) {
         status += "Landing site found. ";
-        set_new_local_waypoint(NAN, NAN, NAN);
         if (land_when_found_site) {
             status += "Landing...";
-
-            // TODO rework and put to a separate function
-            if (_was_mission_paused) {
-                status += " from mission ";
-
-                change_missions_landing_site_to_current(progress);
-            } else if (_was_landing_paused) {
-                status += " from manual ";
-                _action->hold();  // Quickly switching to hold mode is necessary in order to make PX4 take the new xy
-                                  // coordinate as landing position
-                std::this_thread::sleep_for(200ms);
-                _action->land();
-            } else {
-                status += " 3 ";
-                // TODO check why this happens and make something reasonable here.
-            }
+            // Landing commands will now be issued by the OA interface callback
         } else {
             status += "Holding position...";
             _action->hold();
@@ -1055,6 +1047,9 @@ void MissionManager::landing_site_search_has_ended(const std::string& _debug) {
         std::cout << std::string(missionManagerOut) << "Could not restore maximum speed after landing site search."
                   << std::endl;
     }
+
+    // Unset the waypoint override
+    set_new_local_waypoint(NAN, NAN, NAN);
 
     _action_triggered = false;
     std::cout << "    *" << std::endl
