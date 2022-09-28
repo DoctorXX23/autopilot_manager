@@ -169,8 +169,8 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         wp_message.vel_z[0] = NAN;
 
         mavlink_message_t corrected_traj_message;
-        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &corrected_traj_message,
-                                                               &wp_message);
+        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
+                                                               &corrected_traj_message, &wp_message);
         _mavlink_passthrough->send_message(corrected_traj_message);
 
         if (DEBUG_PRINT) {
@@ -189,7 +189,8 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         const bool is_in_mission = _flight_mode == mavsdk::Telemetry::FlightMode::Mission;
         const bool is_curr_landing_state_on_ground = _landed_state == mavsdk::Telemetry::LandedState::OnGround;
         const bool is_prev_landing_state_landing = _previous_landed_state == mavsdk::Telemetry::LandedState::Landing;
-        const bool is_mission_over = progress.current >= progress.total-1; // -1 needed, as MAVSDK not always counts correctly
+        const bool is_mission_over =
+            progress.current >= progress.total - 1;  // -1 needed, as MAVSDK not always counts correctly
         const bool is_safe_landing_ended = _landing_planner.state() == landing_planner::LandingSearchState::ENDED;
         const bool is_on_ground_after_mission_with_safe_landing = is_in_mission && is_curr_landing_state_on_ground &&
                                                                   is_prev_landing_state_landing && is_mission_over &&
@@ -200,8 +201,8 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
             mavlink_message_t forwarded_traj_message;
-            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &forwarded_traj_message,
-                                                               &wp_message);
+            mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
+                                                                   &forwarded_traj_message, &wp_message);
             _mavlink_passthrough->send_message(forwarded_traj_message);
         } else {
             // If safe landing kicks in during the final landing of a mission, the mode does not automatically switch to
@@ -271,8 +272,7 @@ void MissionManager::set_global_position_reference() {
         if (cmd_result.first == mavsdk::Telemetry::Result::Success) {
             if (!_global_origin_reference_set) {
                 std::cout << std::string(missionManagerOut)
-                          << "Successfully received a GPS_GLOBAL_ORIGIN MAVLink message"
-                          << std::endl;
+                          << "Successfully received a GPS_GLOBAL_ORIGIN MAVLink message" << std::endl;
             }
 
             const bool lat_valid = cmd_result.second.latitude_deg != 0.0;
@@ -285,7 +285,7 @@ void MissionManager::set_global_position_reference() {
 
                 const bool ori_changed = lat_changed || lon_changed || alt_changed;
 
-                if ( ori_changed ) {
+                if (ori_changed) {
                     _ref_latitude.store(cmd_result.second.latitude_deg);
                     _ref_longitude.store(cmd_result.second.longitude_deg);
                     _ref_altitude.store(cmd_result.second.altitude_m);
@@ -309,16 +309,14 @@ void MissionManager::set_global_position_reference() {
             status = std::string(missionManagerOut) +
                      "GPS_GLOBAL_ORIGIN stream request timeout. Message not yet received. Retrying...";
         } else {
-            status = std::string(missionManagerOut) +
-                     "GPS_GLOBAL_ORIGIN stream request failed. Retrying...";
+            status = std::string(missionManagerOut) + "GPS_GLOBAL_ORIGIN stream request failed. Retrying...";
         }
 
-        if ( status != "") {
+        if (status != "") {
             std::cout << status << std::endl;
         }
         std::this_thread::sleep_for(1s);
     }
-
 }
 
 mavsdk::geometry::CoordinateTransformation::LocalCoordinate MissionManager::get_local_position_from_local_offset(
@@ -580,7 +578,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                         std::cout << status << std::endl;
 
                     } else if (safe_landing_on_no_safe_land == "LANDING_SITE_SEARCH") {
-                        if (_global_origin_reference_set && _got_traj ) {
+                        if (_global_origin_reference_set && _got_traj) {
                             std::cout << "*" << std::endl
                                       << "***" << std::endl
                                       << "***** Starting Landing Site Search" << std::endl
@@ -655,17 +653,14 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                             status = std::string(missionManagerOut) +
                                      "Global position reference not set. Holding position...";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error,
-                                                              status);
-                        }
-                        else if (!_got_traj) {
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error, status);
+                        } else if (!_got_traj) {
                             _action->hold();
                             landing_site_search_has_ended("No OA");
 
                             status = std::string(missionManagerOut) +
                                      "Landing planner could not start. No OA active in PX4. Holding position...";
-                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error,
-                                                              status);
+                            _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Error, status);
                         }
 
                         std::cout << status << std::endl;
@@ -1201,14 +1196,12 @@ void MissionManager::decision_maker_run() {
         [this](mavsdk::Telemetry::FlightMode flight_mode) { flight_mode_callback(flight_mode); });
 
     // Get the landing state so we know when the vehicle is in-air, landing or on-ground
-    _telemetry->subscribe_landed_state(
-        [this](mavsdk::Telemetry::LandedState landed_state) {
-            if ( landed_state != _landed_state) {
-                _previous_landed_state = _landed_state.load();
-                _landed_state = landed_state;
-            }
+    _telemetry->subscribe_landed_state([this](mavsdk::Telemetry::LandedState landed_state) {
+        if (landed_state != _landed_state) {
+            _previous_landed_state = _landed_state.load();
+            _landed_state = landed_state;
         }
-    );
+    });
 
     while (!int_signal) {
         // Update configuration at each iteration

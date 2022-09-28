@@ -39,6 +39,8 @@
 
 #pragma once
 
+#include <timing_tools/timing_tools.h>
+
 #include <CustomActionHandler.hpp>
 #include <Eigen/Eigen>
 #include <Eigen/Geometry>
@@ -48,7 +50,6 @@
 #include <iostream>
 #include <landing_planner/LandingPlanner.hpp>
 #include <string>
-#include <timing_tools/timing_tools.h>
 
 // MAVSDK dependencies
 #include <mavsdk/geometry.h>
