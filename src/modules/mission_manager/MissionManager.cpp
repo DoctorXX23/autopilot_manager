@@ -253,6 +253,7 @@ void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& f
             // End search cleanly
             std::cout << std::string(missionManagerOut) << "Ending Landing Site Search after flight mode change."
                       << std::endl;
+            _landing_planner.endSearch();
             landing_site_search_has_ended("MODE");
         }
         std::cout << std::string(missionManagerOut) << "Resetting Landing Planner. " << reason.str() << std::endl;
