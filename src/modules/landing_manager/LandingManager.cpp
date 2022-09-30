@@ -72,26 +72,26 @@ void LandingManager::initParameters() {
     // Map config
     this->declare_parameter("max_search_altitude_m");
     this->declare_parameter("max_window_size_m");
-    // Safe-to-land parameters
-    this->declare_parameter("distance_threshold_m");
-    this->declare_parameter("neg_peak_tresh");
-    this->declare_parameter("pos_peak_tresh");
-    this->declare_parameter("std_dev_tresh");
-    this->declare_parameter("percentage_of_valid_samples_in_window");
     this->declare_parameter("voxel_size_m");
+    // Safe-to-land parameters
+    this->declare_parameter("slope_threshold_deg");
+    this->declare_parameter("below_plane_deviation_thresh_m");
+    this->declare_parameter("above_plane_deviation_thresh_m");
+    this->declare_parameter("std_dev_from_plane_thresh_m");
+    this->declare_parameter("percentage_of_valid_samples_in_window");
 
     // Get ROS parameters with defaults
     // Map config
     this->get_parameter_or("max_search_altitude_m", _mapper_parameter.max_search_altitude_m, 8);
     this->get_parameter_or("max_window_size_m", _mapper_parameter.max_window_size_m, 8);
+    this->get_parameter_or("voxel_size_m", _mapper_parameter.voxel_size_m, 0.1f);
     // Safe-to-land parameters
-    this->get_parameter_or("distance_threshold_m", _mapper_parameter.distance_threshold_m, 0.1f);
-    this->get_parameter_or("neg_peak_tresh", _mapper_parameter.neg_peak_tresh, 0.75f);
-    this->get_parameter_or("pos_peak_tresh", _mapper_parameter.pos_peak_tresh, 0.19f);
-    this->get_parameter_or("std_dev_tresh", _mapper_parameter.std_dev_tresh, 0.085f);
+    this->get_parameter_or("slope_threshold_deg", _mapper_parameter.slope_threshold_deg, 10.f);
+    this->get_parameter_or("below_plane_deviation_thresh_m", _mapper_parameter.below_plane_deviation_thresh_m, 0.3f);
+    this->get_parameter_or("above_plane_deviation_thresh_m", _mapper_parameter.above_plane_deviation_thresh_m, 0.3f);
+    this->get_parameter_or("std_dev_from_plane_thresh_m", _mapper_parameter.std_dev_from_plane_thresh_m, 0.1f);
     this->get_parameter_or("percentage_of_valid_samples_in_window",
                            _mapper_parameter.percentage_of_valid_samples_in_window, 0.7f);
-    this->get_parameter_or("voxel_size_m", _mapper_parameter.voxel_size_m, 0.1f);
 }
 
 void LandingManager::updateParameters() {
@@ -137,6 +137,17 @@ void LandingManager::init() {
     // Setup height above obstacle publisher
     _height_above_obstacle_pub =
         this->create_publisher<std_msgs::msg::Float32>("landing_manager/height_above_obstacle", 10);
+
+    // Setup publishers for the height map statistics
+    _valid_sample_percentage_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/valid_sample_percentage", 10);
+    _slope_angle_pub = this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/slope_angle", 10);
+    _above_plane_max_deviation_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/above_plane_max_deviation", 10);
+    _below_plane_max_deviation_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/below_plane_max_deviation", 10);
+    _std_dev_from_plane_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/std_dev_from_plane", 10);
 }
 
 auto LandingManager::deinit() -> void {}
@@ -217,9 +228,10 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
                 ss << " - Old timestamps (" << health.count_timestamp_old << ")";
             }
 
-            RCLCPP_ERROR(get_logger(), ss.str());
+            const std::string error_string = ss.str();
+            RCLCPP_ERROR(get_logger(), error_string.c_str());
             if (_server_utility) {
-                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, ss.str());
+                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, error_string);
             }
 
             last_warning = now;
@@ -323,15 +335,18 @@ void LandingManager::mapper() {
                 _height_above_obstacle = height_above_obstacle;
             }
 
-            // Publish the estimated height above obstacle to the ROS side
+            // Publish the estimated height above obstacle
             auto height_above_obstacle_msg = std_msgs::msg::Float32();
             height_above_obstacle_msg.data = height_above_obstacle;
             _height_above_obstacle_pub->publish(height_above_obstacle_msg);
 
+            // Publish ground height stats
+            const height_map::HeightMapStats height_stats = _mapper->getHeightStats();
+            publishHeightStats(height_stats);
+
             // Show result
             visualizeResult(state, ground_position, now());
-            // std::cout << landingManagerOut << " height " << ground_position.z() - local_state.position.z() <<
-            // std::endl;
+            visualizeGroundPlane(height_stats.slope_normal, ground_position, now());
 
         } else if (!is_landing_mapper_healthy) {
             std::lock_guard<std::mutex> lock(_landing_manager_mutex);
@@ -360,6 +375,25 @@ void LandingManager::mapper() {
     }
 }
 
+void LandingManager::publishHeightStats(const height_map::HeightMapStats& height_stats) const {
+    auto stats_msg = std_msgs::msg::Float32();
+
+    stats_msg.data = height_stats.valid_samples / height_stats.samples * 100.;
+    _valid_sample_percentage_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.slope_deg;
+    _slope_angle_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.above_plane_max_deviation_m;
+    _above_plane_max_deviation_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.below_plane_max_deviation_m;
+    _below_plane_max_deviation_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.std_dev_from_plane_m;
+    _std_dev_from_plane_pub->publish(stats_msg);
+}
+
 void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, const Eigen::Vector3f& position,
                                      const rclcpp::Time& timestamp) {
     Eigen::Vector3f vis_position(position[0], position[1], position[2] - 1.0);
@@ -370,6 +404,11 @@ void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, 
     } else {
         _visualizer->publishGround(vis_position, timestamp, _mapper_parameter.window_size_m, _visualize);
     }
+}
+
+void LandingManager::visualizeGroundPlane(const Eigen::Vector3f& normal, const Eigen::Vector3f& position,
+                                          const rclcpp::Time& timestamp) {
+    _visualizer->visualizeGroundPlane(normal, position, timestamp, _mapper_parameter.window_size_m, _visualize);
 }
 
 void LandingManager::visualizeMap() {

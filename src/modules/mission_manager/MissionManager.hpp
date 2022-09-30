@@ -48,6 +48,7 @@
 #include <atomic>
 #include <future>
 #include <iostream>
+#include <landing_mapper/LandingMapper.hpp>
 #include <landing_planner/LandingPlanner.hpp>
 #include <string>
 
@@ -132,7 +133,7 @@ class MissionManager : public rclcpp::Node, ModuleBase {
         _distance_to_obstacle_update_callback = callback;
     }
 
-    void getCanLandStateCallback(std::function<uint8_t()> callback) {
+    void getCanLandStateCallback(std::function<landing_mapper::eLandingMapperState()> callback) {
         _landing_condition_state_update_callback = callback;
     }
 
@@ -150,8 +151,8 @@ class MissionManager : public rclcpp::Node, ModuleBase {
     void handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now);
     void handle_simple_collision_avoidance(std::chrono::time_point<std::chrono::system_clock> now);
 
-    void update_landing_site_search(const uint8_t safe_landing_state, const float height_above_obstacle,
-                                    const bool land_when_found_site);
+    void update_landing_site_search(const landing_mapper::eLandingMapperState safe_landing_state,
+                                    const float height_above_obstacle, const bool land_when_found_site);
     void landing_site_search_has_ended(const std::string& _debug = "");
 
     void on_mavlink_trajectory_message(const mavlink_message_t& _message);
@@ -180,7 +181,7 @@ class MissionManager : public rclcpp::Node, ModuleBase {
 
     std::function<MissionManagerConfiguration()> _config_update_callback;
     std::function<float()> _distance_to_obstacle_update_callback;
-    std::function<uint8_t()> _landing_condition_state_update_callback;
+    std::function<landing_mapper::eLandingMapperState()> _landing_condition_state_update_callback;
     std::function<float()> _height_above_obstacle_update_callback;
 
     std::string _path_to_custom_action_file;

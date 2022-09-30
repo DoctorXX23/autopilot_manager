@@ -49,6 +49,8 @@ using namespace std::chrono_literals;
 
 static std::atomic<bool> int_signal{false};
 
+using LandingMapperState = landing_mapper::eLandingMapperState;
+
 MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
                                const std::string& path_to_custom_action_file)
     : Node("mission_manager"),
@@ -417,6 +419,7 @@ bool MissionManager::under_manual_control() {
 void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now) {
     std::unique_lock<std::mutex> lock(mission_manager_config_mtx);
     const bool safe_landing_enabled = _mission_manager_config.safe_landing_enabled;
+    const float safe_landing_distance_to_ground = _mission_manager_config.safe_landing_distance_to_ground;
     const bool safe_landing_try_landing_after_action = _mission_manager_config.safe_landing_try_landing_after_action;
     const std::string safe_landing_on_no_safe_land = _mission_manager_config.safe_landing_on_no_safe_land;
     const double landing_site_search_max_speed = _mission_manager_config.landing_site_search_max_speed;
@@ -437,7 +440,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
     const double local_position_offset_z = _mission_manager_config.local_position_offset_z;
     lock.unlock();
 
-    const uint8_t safe_landing_state = _landing_condition_state_update_callback();
+    const LandingMapperState safe_landing_state = _landing_condition_state_update_callback();
     const float height_above_obstacle = _height_above_obstacle_update_callback();
 
     if (safe_landing_enabled) {
@@ -458,13 +461,30 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
         _mavlink_passthrough->send_message(new_heartbeat_message);
 
         /*
-         * If we're not handling an action already, check if we need to start one.
+         * If we're not handling an action already and landing has been triggered, check if we need to start the safe
+         * landing action.
          */
         if (!_action_triggered) {
             std::string status{};
 
             if (landing_triggered()) {
-                if (height_above_obstacle > 1.5 && safe_landing_state == 0 /*eLandingMapperState::UNHEALTHY*/) {
+                /*
+                 *  Stop landing and hold if
+                 *      1. vehicle is >1.5m above ground and mapper is "unhealthy"
+                 *  Start safe landing if
+                 *      1. mapper says "cannot land", or
+                 *      2. mapper has no data ("unknown") and vehicle is still >1.5m above ground
+                 *  Land without intervention if
+                 *      1. mapper says "can land", "too high" or "close to ground", or
+                 *      2. mapper is "unhealthy" or "unknown" but vehicle is already near the ground (<=1.5m)
+                 */
+                const bool cannot_land = safe_landing_state == LandingMapperState::CAN_NOT_LAND;
+                const bool unhealthy_and_above_1_5m =
+                    safe_landing_state == LandingMapperState::UNHEALTHY && height_above_obstacle > 1.5;
+                const bool unknown_and_above_1_5m =
+                    safe_landing_state == LandingMapperState::UNKNOWN && height_above_obstacle > 1.5;
+                const bool should_trigger_safe_landing = cannot_land || unknown_and_above_1_5m;
+                if (unhealthy_and_above_1_5m) {
                     // If the safe landing status is unhealthy, then hold position.
                     _action->hold();
 
@@ -474,23 +494,9 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
 
                     _action_triggered = true;
                     _last_time = now;
-
-                } else if (height_above_obstacle > 1.5 && safe_landing_state == 1 /*eLandingMapperState::UNKNOWN*/) {
-                    // If the vehicle is bellow the defined maximum distance to ground to determine if it is
-                    // safe to land or not, then it will still try to land until it reaches an height that
-                    // allows it to determine if it can land or not. Otherwise, it holds position.
-                    _action->hold();
-
-                    status =
-                        std::string(missionManagerOut) + "Cannot determine if it is safe to land. Holding position...";
-                    _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Warning, status);
-                    std::cout << status << std::endl;
-
-                    _action_triggered = true;
-                    _last_time = now;
-
-                } else if (safe_landing_state == 4 /*eLandingMapperState::CAN_NOT_LAND*/) {
-                    std::cout << std::string(missionManagerOut) << "Cannot land! -----------------------" << std::endl;
+                } else if (should_trigger_safe_landing) {
+                    std::cout << std::string(missionManagerOut) << "Cannot land! ----------------------- ("
+                              << safe_landing_state << ")" << std::endl;
                     if (safe_landing_on_no_safe_land == "HOLD") {
                         _action->hold();
 
@@ -551,6 +557,7 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
                             landing_planner::LandingPlannerConfig lp_config;
                             lp_config.max_distance = landing_site_search_max_distance;
                             lp_config.min_height = landing_site_search_min_height;
+                            lp_config.max_height = safe_landing_distance_to_ground;
                             lp_config.min_distance_after_abort = landing_site_search_min_distance_after_abort;
                             lp_config.waypoint_arrival_radius = landing_site_search_arrival_radius;
                             lp_config.site_assess_time = landing_site_search_assess_time;
@@ -760,38 +767,40 @@ void MissionManager::handle_safe_landing(std::chrono::time_point<std::chrono::sy
     }
 }
 
-void MissionManager::update_landing_site_search(const uint8_t safe_landing_state, const float height_above_obstacle,
-                                                const bool land_when_found_site) {
+void MissionManager::update_landing_site_search(const landing_mapper::eLandingMapperState safe_landing_state,
+                                                const float height_above_obstacle, const bool land_when_found_site) {
     /*
      *  STEP 1: Decide what to do
      */
     bool should_initiate_landing = false;
     const landing_planner::LandingSearchState search_state = _landing_planner.state();
-    if (search_state == landing_planner::LandingSearchState::SEARCH_ACTIVE &&
-        safe_landing_state == 3 /*eLandingMapperState::CAN_LAND*/ &&
-        _landing_planner.isValidCandidateSite({_current_pos_x, _current_pos_y})) {
+    const bool found_candidate_landing_site = search_state == landing_planner::LandingSearchState::SEARCH_ACTIVE &&
+                                              safe_landing_state == LandingMapperState::CAN_LAND &&
+                                              _landing_planner.isValidCandidateSite({_current_pos_x, _current_pos_y});
+    const bool busy_landing = search_state == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND;
+    const bool too_high_for_mapper = safe_landing_state == LandingMapperState::TOO_HIGH;
+    if (found_candidate_landing_site) {
         // Observed a safe place while searching for a landing site.
         _landing_planner.candidateSiteFoundAt({_current_pos_x, _current_pos_y});
-    } else if (search_state == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
-        if (safe_landing_state == 0 /*eLandingMapperState::UNHEALTHY*/ ||
-            safe_landing_state == 1 /*eLandingMapperState::UNKNOWN*/ ||
-            safe_landing_state == 4 /*eLandingMapperState::CAN_NOT_LAND*/) {
+    } else if (busy_landing) {
+        if (safe_landing_state == LandingMapperState::UNHEALTHY || safe_landing_state == LandingMapperState::UNKNOWN ||
+            safe_landing_state == LandingMapperState::CAN_NOT_LAND) {
             // Attempting to land, but there's a problem.
             std::string status = std::string(missionManagerOut) + "Aborting landing at candidate site";
             _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Info, status);
             std::cout << status << std::endl;
             _landing_planner.abortLanding(-_current_pos_z, height_above_obstacle);
         }
-    } else if (safe_landing_state == 5 /*eLandingMapperState::TOO_HIGH*/) {
-        // Adjust search altitude
-        _landing_planner.adjustSearchAltitude(-_current_pos_z, height_above_obstacle,
-                                              _mission_manager_config.safe_landing_distance_to_ground);
     } else {
-        _landing_planner.checkForWaypointArrival({_current_pos_x, _current_pos_y}, -_current_pos_z, is_stationary(),
-                                                 safe_landing_state);
-        if (_landing_planner.state() == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
-            // Switched into ATTEMPTING_TO_LAND
-            should_initiate_landing = true;
+        _landing_planner.adjustSearchAltitude(-_current_pos_z, height_above_obstacle);
+
+        if (!too_high_for_mapper) {
+            _landing_planner.checkForWaypointArrival({_current_pos_x, _current_pos_y}, -_current_pos_z, is_stationary(),
+                                                     safe_landing_state);
+            if (_landing_planner.state() == landing_planner::LandingSearchState::ATTEMPTING_TO_LAND) {
+                // Switched into ATTEMPTING_TO_LAND
+                should_initiate_landing = true;
+            }
         }
     }
 
