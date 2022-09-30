@@ -13,9 +13,9 @@ def generate_launch_description():
     return LaunchDescription([
         IncludeLaunchDescription(PythonLaunchDescriptionSource(
             [ThisLaunchFileDir(), '/static_tf.launch'])),
-#        IncludeLaunchDescription(
-#            PythonLaunchDescriptionSource([get_package_share_directory('ros2bagger'), '/launch/safe_landing.launch'])
-#        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([get_package_share_directory('ros2bagger'), '/launch/safe_landing.launch'])
+        ),
         Node(
             package='autopilot-manager',
             executable='autopilot-manager',
