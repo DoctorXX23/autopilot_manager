@@ -67,12 +67,30 @@ class AutopilotManager {
     double _global_position_waypoint_lon = 0.0;
     double _global_position_waypoint_alt_amsl = 0.0;
 
+    // Depth camera configuration
+    double _camera_offset_x = 0.0;
+    double _camera_offset_y = 0.0;
+    double _camera_yaw = 0.0;
+
     // Safe landing configurations
     uint8_t _safe_landing_enabled = false;
     double _safe_landing_area_square_size = 0.0;
     double _safe_landing_distance_to_ground = 0.0;
     std::string _safe_landing_on_no_safe_land = "";
     uint8_t _safe_landing_try_landing_after_action = false;
+
+    // Landing site search configurations
+    double _landing_site_search_max_speed = 0.0;
+    double _landing_site_search_max_distance = 0.0;
+    double _landing_site_search_min_height = 0.0;
+    double _landing_site_search_min_distance_after_abort = 0.0;
+    double _landing_site_search_arrival_radius = 0.0;
+    double _landing_site_search_assess_time = 0.0;
+    std::string _landing_site_search_strategy = "";
+
+    // Spiral search strategy configuration
+    double _landing_site_search_spiral_spacing = 0.0;
+    int _landing_site_search_spiral_points = 0;
 
     // Simple collision avoidance configurations
     uint8_t _simple_collision_avoid_enabled = false;

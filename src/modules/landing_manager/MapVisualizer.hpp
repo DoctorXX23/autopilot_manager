@@ -41,7 +41,7 @@
 #include <common.h>
 
 #include <Eigen/Core>
-#include <landing_mapper/EuclideanSignedDistanceFields.hpp>
+#include <landing_mapper/HeightMap.hpp>
 
 // ROS dependencies
 #include <rclcpp/duration.hpp>
@@ -85,8 +85,11 @@ class MapVisualizer {
                        bool enabled) const;
 
     template <typename T>
-    void visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& esdf, const rclcpp::Time& timestamp,
-                       bool enabled = true);
+    void visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp, bool enabled);
+
+    template <class Derived>
+    void visualizeGroundPlane(const Eigen::MatrixBase<Derived>& normal, const Eigen::MatrixBase<Derived>& position,
+                              const rclcpp::Time& timestamp, float size, bool enabled) const;
 
     void prepare_point_cloud_msg(int64_t timestamp_ns, size_t width, size_t height, bool enabled = true);
 
@@ -182,8 +185,8 @@ void MapVisualizer::publishGround(const Eigen::MatrixBase<Derived>& point, const
 }
 
 template <typename T>
-void MapVisualizer::visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& esdf, const rclcpp::Time& timestamp,
-                                  bool enabled) {
+void MapVisualizer::visualizeHeightMap(const height_map::HeightMap<T>& height_map, const rclcpp::Time& timestamp,
+                                       bool enabled) {
     if (!enabled) {
         return;
     }
@@ -193,17 +196,16 @@ void MapVisualizer::visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& 
     visualization_msgs::msg::Marker map_marker;
     map_marker.header.frame_id = NED_FRAME;
     map_marker.header.stamp = timestamp;
-    map_marker.ns = "esdf";
+    map_marker.ns = "height_map";
     map_marker.id = 0;
     map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
     map_marker.action = visualization_msgs::msg::Marker::DELETE;
     marker_array.markers.push_back(map_marker);
 
-    const esdfvoxelcube::ESDFVoxelCube esdf_map = esdf.getEsdfMap();
-    const double cell_size = esdf_map.getBinEdgeWidth();
+    const double cell_size = height_map.getBinEdgeWidth();
     map_marker.header.frame_id = NED_FRAME;
     map_marker.header.stamp = timestamp;
-    map_marker.ns = "esdf";
+    map_marker.ns = "height_map";
     map_marker.id = 0;
     map_marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
     map_marker.action = visualization_msgs::msg::Marker::ADD;
@@ -219,43 +221,79 @@ void MapVisualizer::visualizeEsdf(const esdf::EuclideanSignedDistanceFields<T>& 
     map_marker.color.g = 0.0;
     map_marker.color.b = 0.0;
 
-    const Eigen::Vector3i grid_min = esdf_map.getLowerBoundaryIndices().array();
-    const Eigen::Vector3i grid_max = esdf_map.getUpperBoundaryIndices().array();
+    const Eigen::Matrix<T, 2, 1> map_centre = height_map.getCentrePosition();
+    const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> heights = height_map.heights();
+    const int map_size_x = heights.rows();
+    const int map_size_y = heights.cols();
 
-    // From previous implementation
-    // constexpr float distance_max_value = 20.f;
-    // constexpr float distance_min_value = -1.f;
-    // constexpr float range_max = 320.f;
-    // constexpr float range_min = 0.f;
+    for (int x = 0; x < map_size_x; x++) {
+        for (int y = 0; y < map_size_y; y++) {
+            if (heights(x, y) != std::numeric_limits<T>::max()) {
+                const Eigen::Matrix<T, 3, 1> height_pos(cell_size * (x - map_size_x * 0.5) + map_centre(0),
+                                                        cell_size * (y - map_size_y * 0.5) + map_centre(1),
+                                                        heights(x, y) + cell_size * 0.5);
+                map_marker.points.push_back(toPoint(height_pos));
 
-    for (int i = grid_min[0]; i < grid_max[0]; ++i) {
-        for (int j = grid_min[1]; j < grid_max[1]; ++j) {
-            for (int k = grid_min[2]; k < grid_max[2]; ++k) {
-                const Eigen::Vector3i index(i, j, k);
-                const esdfvoxelcube::ESDFNode<T>& voxel = esdf_map.getNode(index);
-                if (voxel.is_observed && voxel.distance < cell_size) {
-                    const Eigen::Matrix<T, 3, 1> voxel_center_pos = esdf_map.getNodeCenter(index);
-                    map_marker.points.push_back(toPoint(voxel_center_pos));
-
-                    // const float h = ((range_max - range_min) * (voxel.distance - distance_min_value) /
-                    //                 (distance_max_value - distance_min_value)) +
-                    //                 range_min;
-                    // MA: not entirely sure what this normalization is meant for. Probably not
-                    // necessary anymore since we're only displaying voxels that have small
-                    // distances. Hence, color by height for now and wrap around every 25m.
-
-                    // TODO make the 25m / 2.0 a parameter somehow. Either dynamic or by ROS parameters
-                    const float h = std::abs(std::fmod(voxel_center_pos.z(), 2.0) / 2.0) * 360;
-
-                    std_msgs::msg::ColorRGBA color;
-                    color.a = 0.5;
-                    std::tie(color.r, color.g, color.b) = HSVtoRGB(std::make_tuple(h, 1.f, 1.f));
-                    map_marker.colors.push_back(color);
-                }
+                const float h = std::abs(std::fmod(height_pos.z(), 2.0) / 2.0) * 360;
+                std_msgs::msg::ColorRGBA color;
+                color.a = 0.5;
+                std::tie(color.r, color.g, color.b) = HSVtoRGB(std::make_tuple(h, 1.f, 1.f));
+                map_marker.colors.push_back(color);
             }
         }
     }
     marker_array.markers.push_back(map_marker);
+    marker_map_pub_->publish(marker_array);
+}
+
+template <class Derived>
+void MapVisualizer::visualizeGroundPlane(const Eigen::MatrixBase<Derived>& normal,
+                                         const Eigen::MatrixBase<Derived>& position, const rclcpp::Time& timestamp,
+                                         float size, bool enabled) const {
+    if (!enabled) {
+        return;
+    }
+
+    EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived, 3);
+
+    std_msgs::msg::ColorRGBA color;
+    color.a = .6;
+    color.r = 1.;
+    color.g = 1.;
+    color.b = 1.;
+
+    geometry_msgs::msg::Vector3 scale;
+    scale.x = size;
+    scale.y = size;
+    scale.z = 0.01;
+
+    visualization_msgs::msg::MarkerArray marker_array;
+    visualization_msgs::msg::Marker m;
+
+    m.header.frame_id = NED_FRAME;
+    m.header.stamp = timestamp;
+    m.ns = "ground_plane";
+    m.type = visualization_msgs::msg::Marker::CUBE;
+    m.action = visualization_msgs::msg::Marker::ADD;
+    m.scale = scale;
+    m.color = color;
+    m.lifetime = rclcpp::Duration(5, 0);
+    m.id = 0;
+    m.pose.position = toPoint(position);
+
+    // Compute orientation in angle-axis form
+    const Eigen::Vector3f vertical = {0., 0., -1.};
+    const Eigen::Vector3f axis = vertical.cross(normal).normalized();
+    const float angle = acos(-normal(2));
+
+    // Convert to quaternion
+    const Eigen::Vector3f axis_scaled = axis * sin(angle / 2);
+    m.pose.orientation.x = axis_scaled(0);
+    m.pose.orientation.y = axis_scaled(1);
+    m.pose.orientation.z = axis_scaled(2);
+    m.pose.orientation.w = cos(angle / 2);
+
+    marker_array.markers.push_back(m);
     marker_map_pub_->publish(marker_array);
 }
 

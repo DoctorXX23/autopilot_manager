@@ -41,6 +41,7 @@
 #pragma once
 
 #include <common.h>
+#include <timing_tools/timing_tools.h>
 
 #include <Eigen/Core>
 #include <ModuleBase.hpp>
@@ -56,6 +57,10 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 
+// MAVSDK dependencies
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/server_utility/server_utility.h>
+
 struct VehicleState {
     bool valid{false};
     Eigen::Vector3f position{NAN, NAN, NAN}, velocity{NAN, NAN, NAN}, acceleration{NAN, NAN, NAN};
@@ -63,11 +68,11 @@ struct VehicleState {
     Eigen::Vector3f angular_velocity{NAN, NAN, NAN};
 };
 
-static constexpr auto landingManagerOut = "[Landing Manager]";
+static constexpr auto landingManagerOut = "[Landing Manager] ";
 
 class LandingManager : public rclcpp::Node, ModuleBase {
    public:
-    LandingManager();
+    LandingManager(std::shared_ptr<mavsdk::System> mavsdk_system);
     ~LandingManager();
     LandingManager(const LandingManager&) = delete;
     auto operator=(const LandingManager&) -> const LandingManager& = delete;
@@ -87,6 +92,13 @@ class LandingManager : public rclcpp::Node, ModuleBase {
         get_latest_landing_condition_state() {
         std::lock_guard<std::mutex> lock(_landing_manager_mutex);
         return _state;
+    }
+
+    landing_mapper::eLandingMapperState RCPPUTILS_TSA_GUARDED_BY(_landing_manager_mutex)
+        get_landing_condition_state_at_position(float x, float y) {
+        std::lock_guard<std::mutex> lock_manager(_landing_manager_mutex);
+        std::lock_guard<std::mutex> lock_map(_map_mutex);
+        return _mapper->computeLandingStateAtPositionXY(x, y);
     }
 
     float RCPPUTILS_TSA_GUARDED_BY(_landing_manager_mutex) get_latest_height_above_obstacle() {
@@ -111,9 +123,18 @@ class LandingManager : public rclcpp::Node, ModuleBase {
     void mapper();
     bool healthCheck(const std::shared_ptr<ExtendedDownsampledImageF>& depth_msg) const;
 
+    void publishHeightStats(const height_map::HeightMapStats& height_stats) const;
+
     void visualizeResult(landing_mapper::eLandingMapperState state, const Eigen::Vector3f& position,
                          const rclcpp::Time& timestamp);
+    void visualizeGroundPlane(const Eigen::Vector3f& normal, const Eigen::Vector3f& position,
+                              const rclcpp::Time& timestamp);
     void visualizeMap();
+
+    void printStats();
+
+    std::shared_ptr<mavsdk::System> _mavsdk_system;
+    std::shared_ptr<mavsdk::ServerUtility> _server_utility;
 
     std::function<LandingManagerConfiguration()> _config_update_callback;
 
@@ -127,14 +148,28 @@ class LandingManager : public rclcpp::Node, ModuleBase {
 
     std::shared_ptr<viz::MapVisualizer> _visualizer;
 
+    timing_tools::FrequencyMeter _frequency_mapper;
+    timing_tools::FrequencyMeter _frequency_visualise_map;
+    rclcpp::TimerBase::SharedPtr _timer_stats;
+
     rclcpp::TimerBase::SharedPtr _timer_mapper;
     rclcpp::TimerBase::SharedPtr _timer_map_visualizer;
+
+    int _images_processed = 0;
+    int _points_processed = 0;
+    int _points_received = 0;
 
     rclcpp::CallbackGroup::SharedPtr _callback_group_mapper;
     rclcpp::CallbackGroup::SharedPtr _callback_group_telemetry;
 
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _landing_state_pub;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _height_above_obstacle_pub;
+
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _valid_sample_percentage_pub;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _slope_angle_pub;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _above_plane_max_deviation_pub;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _below_plane_max_deviation_pub;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr _std_dev_from_plane_pub;
 
     std::function<std::shared_ptr<ExtendedDownsampledImageF>()> _downsampled_depth_update_callback;
 

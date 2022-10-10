@@ -14,9 +14,12 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 find_package(PythonInterp 3 REQUIRED)
+find_package(MAVSDK REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(image_downsampler REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(timing_tools REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(landing_mapper REQUIRED)
 
@@ -33,6 +36,7 @@ ament_target_dependencies(landing-manager
   landing_mapper
   image_downsampler
   std_msgs
+  timing_tools
   visualization_msgs
 )
 target_include_directories(landing-manager PUBLIC
@@ -43,12 +47,14 @@ target_include_directories(landing-manager PUBLIC
   ${landing_mapper_INCLUDE_DIRS}
 )
 target_link_libraries(landing-manager
+  MAVSDK::mavsdk_server_utility
+  MAVSDK::mavsdk
   Eigen3::Eigen
   landing_mapper
   ${rclcpp_LIBRARIES}
   ${image_downsampler_LIBRARIES}
-  ${px4_msgs_LIBRARIES}
   ${std_msgs_LIBRARIES}
+  ${timing_tools_LIBRARIES}
   ${visualization_msgs_LIBRARIES}
 )
 

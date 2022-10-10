@@ -100,6 +100,7 @@ auto AutopilotManager::HandleRequest(DBusMessage* request) -> DBusMessage* {
 void AutopilotManager::initialProvisioning() {
     AutopilotManagerConfig config;
     if (config.InitFromFile(_config_path)) {
+        config.Print();
         ResponseCode response_code = SetConfiguration(config);
         std::cout << "[Autopilot Manager] Initial provisioning finished with code " << response_code << std::endl;
     } else {
@@ -130,12 +131,29 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
     _global_position_waypoint_lon = config.global_position_waypoint_lon;
     _global_position_waypoint_alt_amsl = config.global_position_waypoint_alt_amsl;
 
+    // Depth camera confguration
+    _camera_offset_x = config.camera_offset_x;
+    _camera_offset_y = config.camera_offset_y;
+    _camera_yaw = config.camera_yaw;
+
     // Safe landing configurations
     _safe_landing_enabled = config.safe_landing_enabled;
     _safe_landing_area_square_size = config.safe_landing_area_square_size;
     _safe_landing_distance_to_ground = config.safe_landing_distance_to_ground;
     _safe_landing_on_no_safe_land = config.safe_landing_on_no_safe_land;
     _safe_landing_try_landing_after_action = config.safe_landing_try_landing_after_action;
+
+    // Landing site search configurations
+    _landing_site_search_max_speed = config.landing_site_search_max_speed;
+    _landing_site_search_max_distance = config.landing_site_search_max_distance;
+    _landing_site_search_min_height = config.landing_site_search_min_height;
+    _landing_site_search_min_distance_after_abort = config.landing_site_search_min_distance_after_abort;
+    _landing_site_search_arrival_radius = config.landing_site_search_arrival_radius;
+    _landing_site_search_assess_time = config.landing_site_search_assess_time;
+    _landing_site_search_strategy = config.landing_site_search_strategy;
+    // Spiral search strategy
+    _landing_site_search_spiral_spacing = config.landing_site_search_spiral_spacing;
+    _landing_site_search_spiral_points = config.landing_site_search_spiral_points;
 
     // Simple collision avoidance configurations
     _simple_collision_avoid_enabled = config.simple_collision_avoid_enabled;
@@ -182,12 +200,29 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     config.global_position_waypoint_lon = _global_position_waypoint_lon;
     config.global_position_waypoint_alt_amsl = _global_position_waypoint_alt_amsl;
 
+    // Depth camera confguration
+    config.camera_offset_x = _camera_offset_x;
+    config.camera_offset_y = _camera_offset_y;
+    config.camera_yaw = _camera_yaw;
+
     // Safe landing configurations
     config.safe_landing_enabled = _safe_landing_enabled;
     config.safe_landing_area_square_size = _safe_landing_area_square_size;
     config.safe_landing_distance_to_ground = _safe_landing_distance_to_ground;
     config.safe_landing_on_no_safe_land = _safe_landing_on_no_safe_land;
     config.safe_landing_try_landing_after_action = _safe_landing_try_landing_after_action;
+
+    // Landing site search configurations
+    config.landing_site_search_max_speed = _landing_site_search_max_speed;
+    config.landing_site_search_max_distance = _landing_site_search_max_distance;
+    config.landing_site_search_min_height = _landing_site_search_min_height;
+    config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
+    config.landing_site_search_arrival_radius = _landing_site_search_arrival_radius;
+    config.landing_site_search_assess_time = _landing_site_search_assess_time;
+    config.landing_site_search_strategy = _landing_site_search_strategy;
+    // Spiral search strategy
+    config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
+    config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
 
     // Simple collision avoidance configurations
     config.simple_collision_avoid_enabled = _simple_collision_avoid_enabled;
@@ -248,13 +283,13 @@ void AutopilotManager::start() {
         const auto system = fut.get();
 
         // Create the Sensor Manager
-        _sensor_manager = std::make_shared<SensorManager>();
+        _sensor_manager = std::make_shared<SensorManager>(system);
 
         // Create the Collision Avoidance Manager
         _collision_avoidance_manager = std::make_shared<CollisionAvoidanceManager>();
 
         // Create the Landing Manager
-        _landing_manager = std::make_shared<LandingManager>();
+        _landing_manager = std::make_shared<LandingManager>(system);
 
         // Create Mission Manager
         _mission_manager = std::make_shared<MissionManager>(system, _custom_action_config_path);
@@ -284,6 +319,15 @@ void AutopilotManager::start() {
             config.safe_landing_distance_to_ground = _safe_landing_distance_to_ground;
             config.safe_landing_on_no_safe_land = _safe_landing_on_no_safe_land;
             config.safe_landing_try_landing_after_action = _safe_landing_try_landing_after_action;
+            config.landing_site_search_max_speed = _landing_site_search_max_speed;
+            config.landing_site_search_max_distance = _landing_site_search_max_distance;
+            config.landing_site_search_min_height = _landing_site_search_min_height;
+            config.landing_site_search_min_distance_after_abort = _landing_site_search_min_distance_after_abort;
+            config.landing_site_search_arrival_radius = _landing_site_search_arrival_radius;
+            config.landing_site_search_assess_time = _landing_site_search_assess_time;
+            config.landing_site_search_strategy = _landing_site_search_strategy;
+            config.landing_site_search_spiral_spacing = _landing_site_search_spiral_spacing;
+            config.landing_site_search_spiral_points = _landing_site_search_spiral_points;
             config.simple_collision_avoid_enabled = _simple_collision_avoid_enabled;
             config.simple_collision_avoid_distance_threshold = _simple_collision_avoid_distance_threshold;
             config.simple_collision_avoid_action_on_condition_true = _simple_collision_avoid_action_on_condition_true;
@@ -334,6 +378,12 @@ void AutopilotManager::start() {
             return _landing_manager->get_latest_landing_condition_state();
         });
 
+        // Init the callback for getting the landing condition state at a particular position
+        _mission_manager->getCanLandAtPositionStateCallback([this](float x, float y) {
+            std::lock_guard<std::mutex> lock(_landing_condition_state_mutex);
+            return _landing_manager->get_landing_condition_state_at_position(x, y);
+        });
+
         // Init the callback for getting the latest landing condition state
         _mission_manager->getHeightAboveObstacleCallback([this]() {
             std::lock_guard<std::mutex> lock(_height_above_obstacle_mutex);
@@ -342,6 +392,7 @@ void AutopilotManager::start() {
 
         // Init and run the Sensor Manager
         _sensor_manager->init();
+        _sensor_manager->set_camera_static_tf(_camera_offset_x, _camera_offset_y, _camera_yaw);
         _sensor_manager_th = std::thread(&AutopilotManager::run_sensor_manager, this);
 
         // Init and run the Collision Avoidance Manager

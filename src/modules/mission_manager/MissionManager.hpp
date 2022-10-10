@@ -39,6 +39,8 @@
 
 #pragma once
 
+#include <timing_tools/timing_tools.h>
+
 #include <CustomActionHandler.hpp>
 #include <Eigen/Eigen>
 #include <Eigen/Geometry>
@@ -46,6 +48,8 @@
 #include <atomic>
 #include <future>
 #include <iostream>
+#include <landing_mapper/LandingMapper.hpp>
+#include <landing_planner/LandingPlanner.hpp>
 #include <string>
 
 // MAVSDK dependencies
@@ -53,12 +57,17 @@
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/custom_action/custom_action.h>
+#include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
+#include <mavsdk/plugins/mission_raw/mission_raw.h>
 #include <mavsdk/plugins/server_utility/server_utility.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
+// ROS dependencies
+#include <rclcpp/rclcpp.hpp>
+
 static constexpr auto missionManagerOut = "[Mission Manager] ";
 
-class MissionManager : public ModuleBase {
+class MissionManager : public rclcpp::Node, ModuleBase {
    public:
     MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, const std::string& path_to_custom_action_file);
     ~MissionManager();
@@ -88,10 +97,28 @@ class MissionManager : public ModuleBase {
         double global_position_waypoint_lon = 0.0;
         double global_position_waypoint_alt_amsl = 0.0;
 
+        // // Depth camera configuration
+        // double camera_offset_x = 0.0;
+        // double camera_offset_y = 0.0;
+        // double camera_yaw = 0.0;
+
         uint8_t safe_landing_enabled = 0U;
         double safe_landing_distance_to_ground = 0.0;
         std::string safe_landing_on_no_safe_land = "";
         uint8_t safe_landing_try_landing_after_action = 0U;
+
+        // Landing site search config
+        double landing_site_search_max_speed = 0.0;
+        double landing_site_search_max_distance = 0.0;
+        double landing_site_search_min_height = 0.0;
+        double landing_site_search_min_distance_after_abort = 0.0;
+        double landing_site_search_arrival_radius = 0.0;
+        double landing_site_search_assess_time = 0.0;
+        std::string landing_site_search_strategy = "";
+
+        // Spiral search strategy config
+        double landing_site_search_spiral_spacing = 0.0;
+        int landing_site_search_spiral_points = 0;
 
         uint8_t simple_collision_avoid_enabled = 0U;
         double simple_collision_avoid_distance_threshold = 0.0;
@@ -106,8 +133,12 @@ class MissionManager : public ModuleBase {
         _distance_to_obstacle_update_callback = callback;
     }
 
-    void getCanLandStateCallback(std::function<uint8_t()> callback) {
+    void getCanLandStateCallback(std::function<landing_mapper::eLandingMapperState()> callback) {
         _landing_condition_state_update_callback = callback;
+    }
+
+    void getCanLandAtPositionStateCallback(std::function<uint8_t(float x, float y)> callback) {
+        _landing_planner.setLandingStateAtPositionCallback(callback);
     }
 
     void getHeightAboveObstacleCallback(std::function<float()> callback) {
@@ -120,16 +151,37 @@ class MissionManager : public ModuleBase {
     void handle_safe_landing(std::chrono::time_point<std::chrono::system_clock> now);
     void handle_simple_collision_avoidance(std::chrono::time_point<std::chrono::system_clock> now);
 
+    void update_landing_site_search(const landing_mapper::eLandingMapperState safe_landing_state,
+                                    const float height_above_obstacle, const bool land_when_found_site);
+    void landing_site_search_has_ended(const std::string& _debug = "");
+
+    void on_mavlink_trajectory_message(const mavlink_message_t& _message);
+    void flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode);
+
     void set_global_position_reference();
+
     void set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl);
     bool arrived_to_new_waypoint();
 
+    void set_new_local_waypoint(const double& x, const double& y, const double& yaw);
+    void go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint);
+
+    bool is_stationary();
+    bool debounce_is_stationary(bool is_stationary);
+
+    bool landing_triggered();
+    bool under_manual_control();
+
+    mavsdk::geometry::CoordinateTransformation::LocalCoordinate get_local_position_from_local_offset(
+        const double& offset_x, const double& offset_y) const;
+    mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_position(
+        mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position) const;
     mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
 
     std::function<MissionManagerConfiguration()> _config_update_callback;
     std::function<float()> _distance_to_obstacle_update_callback;
-    std::function<uint8_t()> _landing_condition_state_update_callback;
+    std::function<landing_mapper::eLandingMapperState()> _landing_condition_state_update_callback;
     std::function<float()> _height_above_obstacle_update_callback;
 
     std::string _path_to_custom_action_file;
@@ -143,13 +195,17 @@ class MissionManager : public ModuleBase {
     std::shared_ptr<mavsdk::Action> _action;
     std::shared_ptr<mavsdk::Telemetry> _telemetry;
     std::shared_ptr<mavsdk::ServerUtility> _server_utility;
+    std::shared_ptr<mavsdk::MavlinkPassthrough> _mavlink_passthrough;
 
     std::atomic<bool> _action_triggered;
+    std::atomic<mavsdk::Telemetry::FlightMode> _flight_mode{mavsdk::Telemetry::FlightMode::Unknown};
     std::atomic<mavsdk::Telemetry::LandedState> _landed_state{mavsdk::Telemetry::LandedState::Unknown};
+    std::atomic<mavsdk::Telemetry::LandedState> _previous_landed_state{mavsdk::Telemetry::LandedState::Unknown};
     std::atomic<bool> _is_global_position_ok;
     std::atomic<bool> _is_home_position_ok;
-    std::atomic<bool> _get_gps_origin_success;
     std::atomic<bool> _global_origin_reference_set;
+
+    std::atomic<int> _is_stationary_debounce_counter;
 
     std::atomic<double> _current_latitude;
     std::atomic<double> _current_longitude;
@@ -160,16 +216,33 @@ class MissionManager : public ModuleBase {
     std::atomic<double> _current_pos_x;
     std::atomic<double> _current_pos_y;
     std::atomic<double> _current_pos_z;
+    std::atomic<double> _current_vel_x;
+    std::atomic<double> _current_vel_y;
+    std::atomic<double> _current_vel_z;
     std::atomic<double> _current_yaw;
     std::atomic<double> _new_latitude;
     std::atomic<double> _new_longitude;
     std::atomic<double> _new_altitude_amsl;
+    std::atomic<double> _new_x;
+    std::atomic<double> _new_y;
+    std::atomic<double> _new_z;
+    float _new_yaw;
     std::atomic<double> _previously_set_waypoint_latitude;
     std::atomic<double> _previously_set_waypoint_longitude;
     std::atomic<double> _previously_set_waypoint_altitude_amsl;
+
+    landing_planner::LandingPlanner _landing_planner;
 
     std::chrono::time_point<std::chrono::system_clock> _last_time{};
 
     std::thread _decision_maker_th;
     std::thread _global_origin_reference_th;
+
+    rclcpp::Time _time_last_traj;
+
+    bool _got_traj;
+
+    timing_tools::FrequencyMeter _frequency_traj;
+
+    static constexpr bool DEBUG_PRINT{false};
 };

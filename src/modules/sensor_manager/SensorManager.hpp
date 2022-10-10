@@ -41,32 +41,43 @@
 #pragma once
 
 #include <common.h>
+#include <timing_tools/timing_tools.h>
 
 #include <Eigen/Dense>
 #include <ModuleBase.hpp>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
+
+#include "TimeSync.hpp"
 
 // ROS dependencies
 #include <message_filters/subscriber.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/create_timer_ros.h>
 #include <tf2_ros/message_filter.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <px4_msgs/msg/vehicle_odometry.hpp>
+#include <px4_msgs/msg/vehicle_status.hpp>
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
-inline static constexpr auto sensorManagerOut = "[Sensor  Manager]";
+// MAVSDK dependencies
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
+#include <mavsdk/plugins/server_utility/server_utility.h>
+#include <mavsdk/plugins/telemetry/telemetry.h>
+
+inline static constexpr auto sensorManagerOut = "[Sensor Manager] ";
 
 class SensorManager : public rclcpp::Node, ModuleBase {
    public:
-    SensorManager();
+    SensorManager(std::shared_ptr<mavsdk::System> mavsdk_system);
     ~SensorManager();
     SensorManager(const SensorManager&) = delete;
     auto operator=(const SensorManager&) -> const SensorManager& = delete;
@@ -81,17 +92,26 @@ class SensorManager : public rclcpp::Node, ModuleBase {
         return _downsampled_depth;
     }
 
+    void set_camera_static_tf(const double x, const double y, const double yaw_deg);
+
    private:
-    void handle_incoming_vehicle_odometry(const px4_msgs::msg::VehicleOdometry::ConstSharedPtr& msg);
     void handle_incoming_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg);
     void handle_incoming_depth_image(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
     bool set_downsampler(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
+    void health_check();
+
     mutable std::mutex _sensor_manager_mutex;
 
-    rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr _vehicle_odometry_sub;
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _depth_img_camera_info_sub;
+
+    rclcpp::Publisher<px4_msgs::msg::VehicleStatus>::SharedPtr _vehicle_status_pub;  // for bagger in MAVLink mode
+
+    std::shared_ptr<mavsdk::System> _mavsdk_system;
+    std::shared_ptr<mavsdk::Telemetry> _telemetry;
+    std::shared_ptr<mavsdk::ServerUtility> _server_utility;
+    std::shared_ptr<mavsdk::MavlinkPassthrough> _mavlink_passthrough;
 
     std::shared_ptr<ImageDownsamplerInterface> _imageDownsampler;
 
@@ -99,14 +119,29 @@ class SensorManager : public rclcpp::Node, ModuleBase {
     Eigen::Vector2f _inverse_focal_length;
     Eigen::Vector2f _principal_point;
 
-    int16_t _downsampline_block_size;
+    int16_t _downsampling_block_size;
+    static constexpr float _downsampling_min_depth_to_use_m{0.2};
 
+    tf2_ros::StaticTransformBroadcaster _static_tf_broadcaster;
     tf2_ros::TransformBroadcaster _tf_broadcaster;
     tf2_ros::Buffer _tf_buffer;
     tf2_ros::TransformListener _tf_listener;
     tf2_ros::MessageFilter<sensor_msgs::msg::Image> _tf_depth_filter;
 
     message_filters::Subscriber<sensor_msgs::msg::Image> _tf_depth_subscriber;
+
+    geometry_msgs::msg::TransformStamped _camera_static_tf;
+
+    rclcpp::TimerBase::SharedPtr _timer_status_task;
+
+    rclcpp::Time _time_last_odometry;
+    rclcpp::Time _time_last_image;
+
+    TimeSync _time_sync;
+
+    timing_tools::FrequencyMeter _frequency_images;
+    timing_tools::FrequencyMeter _frequency_camera_info;
+    timing_tools::FrequencyMeter _frequency_odometry;
 
    protected:
     std::shared_ptr<ExtendedDownsampledImageF> _downsampled_depth;

@@ -29,7 +29,18 @@ def generate_launch_description():
             output='screen',
             arguments=['-a', custom_action_config,
                        '-c', autopilot_manager_config],
-            parameters=[{'sim':True, 'use_sim_time':True}],
+            parameters=[{
+                'sim':True,
+                'use_sim_time':True,
+                'max_search_altitude_m': 8,
+                'max_window_size_m': 8,
+                'voxel_size_m': 0.1,
+                'percentage_of_valid_samples_in_window': 0.7,
+                'slope_threshold_deg': 9.0,
+                'below_plane_deviation_thresh_m': 0.18,
+                'above_plane_deviation_thresh_m': 0.18,
+                'std_dev_from_plane_thresh_m': 0.1
+            }],
             on_exit=[LogInfo(msg=["autopilot-manager failed to start. Stopping everything..."]),
                      Shutdown(reason='autopilot-manager failed to start')],
         )

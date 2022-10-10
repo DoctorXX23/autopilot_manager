@@ -17,6 +17,7 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
+find_package(image_downsampler REQUIRED)
 
 #################
 # Setup targets #

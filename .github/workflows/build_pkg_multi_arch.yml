@@ -11,6 +11,10 @@ on:
     branches:
       - '*'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   packaging:
     name: "ROS 2 ${{ matrix.ros2_distro }} - ${{ matrix.arch }}"
@@ -37,12 +41,12 @@ jobs:
             if [ \"$(git show-ref --tags)\" ]; then \\
               tag=$(git describe --always --tags $(git rev-list --tags --max-count=1) | sed -n 's/v\([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/p'); \\
               if [[ -z \$(echo $tag | xargs) ]]; then \\
-                echo 1.1.3; \\
+                echo 1.2.0; \\
               else \\
                 echo $tag; \\
               fi; \\
             else \\
-              echo 1.1.3; \\
+              echo 1.2.0; \\
             fi"
           )
           ARCH=$(bash -c "if [ \"${{ matrix.arch }}\" = \"x86_64\" ]; then echo amd64; elif [ \"${{ matrix.arch }}\" = \"aarch64\" ]; then echo arm64; fi")
@@ -72,8 +76,10 @@ jobs:
           # Add source dependencies
           git clone https://gitlab.com/libeigen/eigen.git -b 3.3.9 /tmp/colcon_ws/src/eigen
           git clone git@github.com:Auterion/image_downsampler.git /tmp/colcon_ws/src/image_downsampler
-          git clone git@github.com:Auterion/landing_mapper.git -b develop /tmp/colcon_ws/src/landing_mapper
-          git clone git@github.com:Auterion/px4_msgs.git -b develop /tmp/colcon_ws/src/px4_msgs
+          git clone git@github.com:Auterion/landing_mapper.git /tmp/colcon_ws/src/landing_mapper
+          git clone git@github.com:Auterion/landing_planner.git /tmp/colcon_ws/src/landing_planner
+          git clone git@github.com:Auterion/px4_msgs.git /tmp/colcon_ws/src/px4_msgs
+          git clone git@github.com:Auterion/timing_tools.git /tmp/colcon_ws/src/timing_tools
           # Run cross-compilation
           ros_cross_compile /tmp/colcon_ws \
             --arch ${{ matrix.arch }} \
@@ -81,12 +87,11 @@ jobs:
             --rosdistro ${{ matrix.ros2_distro }} \
             --custom-setup-script scripts/cross_compile_dependencies.sh \
             --custom-data-dir /tmp/MAVSDK \
-            --skip-rosdep-keys Eigen3 image_downsampler landing_mapper px4_msgs px4_ros_com \
+            --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner px4_msgs timing_tools \
             --colcon-defaults /tmp/colcon_ws/src/autopilot_manager/scripts/packaging/defaults.yaml
       - name: Create zip
         run: |
           cd /tmp/colcon_ws/install_${{ matrix.arch }}
-          rm -rf px4_msgs px4_ros_com # we don't need the px4_msgs and px4_ros_com packaged here
           zip -r autopilot-manager_${{ matrix.ros2_distro }}_v${{ steps.refs.outputs.tag_version }}_${{ steps.refs.outputs.package_arch }}.zip .
       - name: Publish artefacts
         if: startsWith(github.ref, 'refs/tags/v')

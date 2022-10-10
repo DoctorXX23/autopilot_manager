@@ -10,17 +10,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(MAVSDK REQUIRED)
 find_package(ament_cmake REQUIRED)
-find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(DBUS REQUIRED dbus-1)
 pkg_search_module(LIBDBUS REQUIRED dbus-glib-1)
-
-find_package(image_downsampler REQUIRED)
-find_package(landing_mapper REQUIRED)
-find_package(px4_msgs REQUIRED)
-find_package(visualization_msgs REQUIRED)
 
 if(NOT MSVC)
     add_definitions("-Wall -Wextra ")
@@ -56,12 +51,13 @@ add_executable(
 
 target_link_libraries(
     autopilot-manager
+    MAVSDK::mavsdk_mavlink_passthrough
+    MAVSDK::mavsdk
     collision-avoidance-manager
     landing-manager
     mission-manager
     sensor-manager
     helpers
-    Threads::Threads
     ${GLIB_LDFLAGS}
     ${DBUS_LIBRARIES}
     ${LIBDBUS_LDFLAGS}

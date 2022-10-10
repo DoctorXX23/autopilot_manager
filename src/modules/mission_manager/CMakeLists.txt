@@ -10,34 +10,45 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+
 find_package(MAVSDK REQUIRED)
-find_package(Threads REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
+
+find_package(landing_mapper REQUIRED)
+find_package(landing_planner REQUIRED)
+find_package(timing_tools REQUIRED)
 
 add_library(
     mission-manager SHARED
     MissionManager.cpp
     CustomActionHandler.cpp
 )
-
-target_link_libraries(
-    mission-manager
-    PUBLIC
+ament_target_dependencies(mission-manager
+  timing_tools
+)
+target_link_libraries(mission-manager
     MAVSDK::mavsdk_action
     MAVSDK::mavsdk_custom_action
+    MAVSDK::mavsdk_mission_raw
     MAVSDK::mavsdk_server_utility
     MAVSDK::mavsdk_telemetry
+    MAVSDK::mavsdk_mavlink_passthrough
     MAVSDK::mavsdk
-    PRIVATE Threads::Threads
     Eigen3::Eigen
+    landing_mapper
+    landing_planner
+    ${rclcpp_LIBRARIES}
 )
 
 target_include_directories(mission-manager PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/autopilot_manager/mission_manager>
     ${Eigen3_INCLUDE_DIRS}
-    )
+    ${landing_planner_INCLUDE_DIRS}
+)
 
 install(TARGETS mission-manager
     EXPORT mission-manager

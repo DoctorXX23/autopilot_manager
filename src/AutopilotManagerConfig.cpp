@@ -65,6 +65,8 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
             DBUS_TYPE_UINT32, &safe_landing_enabled, DBUS_TYPE_DOUBLE, &safe_landing_area_square_size, DBUS_TYPE_DOUBLE,
             &safe_landing_distance_to_ground, DBUS_TYPE_STRING, &returnedSafeLandingOnNoSafeLand, DBUS_TYPE_UINT32,
             &safe_landing_try_landing_after_action,
+            // Landing site search configurations
+            DBUS_TYPE_DOUBLE, &landing_site_search_max_distance, DBUS_TYPE_DOUBLE, &landing_site_search_min_height,
             // Simple collision avoidance configurations
             DBUS_TYPE_UINT32, &simple_collision_avoid_enabled, DBUS_TYPE_DOUBLE,
             &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING, &returnedCollAvoidOnCondTrue,
@@ -107,6 +109,10 @@ bool AutopilotManagerConfig::InitFromMessage(DBusMessage* request) {
             std::cout << "    safe_landing_try_landing_after_action: " << std::boolalpha
                       << std::to_string(safe_landing_try_landing_after_action) << std::endl;
 
+            std::cout << "    landing_site_search_max_distance: " << landing_site_search_max_distance << std::endl;
+            std::cout << "    landing_site_search_min_height: " << landing_site_search_min_height << std::endl;
+            std::cout << "    landing_site_search_spiral_spacing: " << landing_site_search_spiral_spacing << std::endl;
+
             std::cout << "    simple_collision_avoid_enabled: " << std::boolalpha
                       << std::to_string(simple_collision_avoid_enabled) << std::endl;
             std::cout << "    simple_collision_avoid_distance_threshold: " << simple_collision_avoid_distance_threshold
@@ -138,6 +144,8 @@ bool AutopilotManagerConfig::AppendToMessage(DBusMessage* reply) const {
             DBUS_TYPE_UINT32, &safe_landing_enabled, DBUS_TYPE_DOUBLE, &safe_landing_area_square_size, DBUS_TYPE_DOUBLE,
             &safe_landing_distance_to_ground, DBUS_TYPE_STRING, &safe_landing_on_no_safe_land, DBUS_TYPE_UINT32,
             &safe_landing_try_landing_after_action,
+            // Landing site search configurations
+            DBUS_TYPE_DOUBLE, &landing_site_search_max_distance, DBUS_TYPE_DOUBLE, &landing_site_search_min_height,
             // Simple collision avoidance configurations
             DBUS_TYPE_UINT32, &simple_collision_avoid_enabled, DBUS_TYPE_DOUBLE,
             &simple_collision_avoid_distance_threshold, DBUS_TYPE_STRING,
@@ -171,12 +179,29 @@ bool AutopilotManagerConfig::WriteToFile(const std::string& config_path) const {
         file << "global_position_waypoint_lon=" << std::to_string(global_position_waypoint_lon) << std::endl;
         file << "global_position_waypoint_alt_amsl=" << std::to_string(global_position_waypoint_alt_amsl) << std::endl;
 
+        file << "camera_offset_x=" << std::to_string(camera_offset_x) << std::endl;
+        file << "camera_offset_y=" << std::to_string(camera_offset_y) << std::endl;
+        file << "camera_yaw=" << std::to_string(camera_yaw) << std::endl;
+
         file << "safe_landing_enabled=" << std::to_string(simple_collision_avoid_enabled) << std::endl;
         file << "safe_landing_area_square_size=" << std::to_string(safe_landing_area_square_size) << std::endl;
         file << "safe_landing_distance_to_ground=" << std::to_string(safe_landing_distance_to_ground) << std::endl;
         file << "safe_landing_on_no_safe_land=" << safe_landing_on_no_safe_land << std::endl;
         file << "safe_landing_try_landing_after_action=" << std::to_string(safe_landing_try_landing_after_action)
              << std::endl;
+
+        file << "landing_site_search_max_speed=" << std::to_string(landing_site_search_max_speed) << std::endl;
+        file << "landing_site_search_max_distance=" << std::to_string(landing_site_search_max_distance) << std::endl;
+        file << "landing_site_search_min_height=" << std::to_string(landing_site_search_min_height) << std::endl;
+        file << "landing_site_search_min_distance_after_abort="
+             << std::to_string(landing_site_search_min_distance_after_abort) << std::endl;
+        file << "landing_site_search_arrival_radius=" << std::to_string(landing_site_search_arrival_radius)
+             << std::endl;
+        file << "landing_site_search_assess_time=" << std::to_string(landing_site_search_assess_time) << std::endl;
+        file << "landing_site_search_strategy=" << landing_site_search_strategy << std::endl;
+        file << "landing_site_search_spiral_spacing=" << std::to_string(landing_site_search_spiral_spacing)
+             << std::endl;
+        file << "landing_site_search_spiral_points=" << std::to_string(landing_site_search_spiral_points) << std::endl;
 
         file << "simple_collision_avoid_enabled=" << std::to_string(simple_collision_avoid_enabled) << std::endl;
         file << "simple_collision_avoid_distance_threshold="
@@ -201,106 +226,120 @@ bool AutopilotManagerConfig::InitFromFile(const std::string& config_path) {
     if (file.is_open()) {
         std::istringstream sin;
         std::string line;
-        std::cout << "[AutopilotManagerConfig] Loaded config from file:" << std::endl;
+        std::cout << "[AutopilotManagerConfig] Loaded config from file" << std::endl;
         while (std::getline(file, line)) {
             sin.str(line.substr(line.find("=") + 1));
             if (line.find("autopilot_manager_enabled") != std::string::npos) {
-                std::cout << "\tautopilot_manager_enabled: " << sin.str() << std::endl;
                 autopilot_manager_enabled = std::stoi(sin.str());
             }
             if (line.find("decision_maker_input_type") != std::string::npos) {
-                std::cout << "\tdecision_maker_input_type: " << sin.str() << std::endl;
                 decision_maker_input_type = sin.str();
             }
 
             if (line.find("script_to_call") != std::string::npos) {
-                std::cout << "\tscript_to_call: " << sin.str() << std::endl;
                 script_to_call = sin.str();
             }
             if (line.find("api_call") != std::string::npos) {
-                std::cout << "\tapi_call: " << sin.str() << std::endl;
                 api_call = sin.str();
             }
             if (line.find("local_position_offset_x") != std::string::npos) {
-                std::cout << "\tlocal_position_offset_x: " << sin.str() << std::endl;
                 local_position_offset_x = std::stod(sin.str());
             }
             if (line.find("local_position_offset_y") != std::string::npos) {
-                std::cout << "\tlocal_position_offset_y: " << sin.str() << std::endl;
                 local_position_offset_y = std::stod(sin.str());
             }
             if (line.find("local_position_offset_z") != std::string::npos) {
-                std::cout << "\tlocal_position_offset_z: " << sin.str() << std::endl;
                 local_position_offset_z = std::stod(sin.str());
             }
             if (line.find("local_position_waypoint_x") != std::string::npos) {
-                std::cout << "\tlocal_position_waypoint_x: " << sin.str() << std::endl;
                 local_position_waypoint_x = std::stod(sin.str());
             }
             if (line.find("local_position_waypoint_y") != std::string::npos) {
-                std::cout << "\tlocal_position_waypoint_y: " << sin.str() << std::endl;
                 local_position_waypoint_y = std::stod(sin.str());
             }
             if (line.find("local_position_waypoint_z") != std::string::npos) {
-                std::cout << "\tlocal_position_waypoint_z: " << sin.str() << std::endl;
                 local_position_waypoint_z = std::stod(sin.str());
             }
             if (line.find("global_position_offset_lat") != std::string::npos) {
-                std::cout << "\tglobal_position_offset_lat: " << sin.str() << std::endl;
                 global_position_offset_lat = std::stod(sin.str());
             }
             if (line.find("global_position_offset_lon") != std::string::npos) {
-                std::cout << "\tglobal_position_offset_lon: " << sin.str() << std::endl;
                 global_position_offset_lon = std::stod(sin.str());
             }
             if (line.find("global_position_offset_alt_amsl") != std::string::npos) {
-                std::cout << "\tglobal_position_offset_alt_amsl: " << sin.str() << std::endl;
                 global_position_offset_alt_amsl = std::stod(sin.str());
             }
             if (line.find("global_position_waypoint_lat") != std::string::npos) {
-                std::cout << "\tglobal_position_waypoint_lat: " << sin.str() << std::endl;
                 global_position_waypoint_lat = std::stod(sin.str());
             }
             if (line.find("global_position_waypoint_lon") != std::string::npos) {
-                std::cout << "\tglobal_position_waypoint_lon: " << sin.str() << std::endl;
                 global_position_waypoint_lon = std::stod(sin.str());
             }
             if (line.find("global_position_waypoint_alt_amsl") != std::string::npos) {
-                std::cout << "\tglobal_position_waypoint_alt_amsl: " << sin.str() << std::endl;
                 global_position_waypoint_alt_amsl = std::stod(sin.str());
             }
 
+            if (line.find("camera_offset_x") != std::string::npos) {
+                camera_offset_x = std::stod(sin.str());
+            }
+            if (line.find("camera_offset_y") != std::string::npos) {
+                camera_offset_y = std::stod(sin.str());
+            }
+            if (line.find("camera_yaw") != std::string::npos) {
+                camera_yaw = std::stod(sin.str());
+            }
+
             if (line.find("safe_landing_enabled") != std::string::npos) {
-                std::cout << "\tsafe_landing_enabled: " << sin.str() << std::endl;
                 safe_landing_enabled = std::stoi(sin.str());
             }
             if (line.find("safe_landing_area_square_size") != std::string::npos) {
-                std::cout << "\tsafe_landing_area_square_size: " << sin.str() << std::endl;
                 safe_landing_area_square_size = std::stod(sin.str());
             }
             if (line.find("safe_landing_distance_to_ground") != std::string::npos) {
-                std::cout << "\tsafe_landing_distance_to_ground: " << sin.str() << std::endl;
                 safe_landing_distance_to_ground = std::stod(sin.str());
             }
             if (line.find("safe_landing_on_no_safe_land") != std::string::npos) {
-                std::cout << "\tsafe_landing_on_no_safe_land: " << sin.str() << std::endl;
                 safe_landing_on_no_safe_land = sin.str();
             }
             if (line.find("safe_landing_try_landing_after_action") != std::string::npos) {
-                std::cout << "\tsafe_landing_try_landing_after_action: " << sin.str() << std::endl;
                 safe_landing_try_landing_after_action = std::stoi(sin.str());
             }
 
+            if (line.find("landing_site_search_max_speed") != std::string::npos) {
+                landing_site_search_max_speed = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_max_distance") != std::string::npos) {
+                landing_site_search_max_distance = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_min_height") != std::string::npos) {
+                landing_site_search_min_height = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_min_distance_after_abort") != std::string::npos) {
+                landing_site_search_min_distance_after_abort = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_arrival_radius") != std::string::npos) {
+                landing_site_search_arrival_radius = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_assess_time") != std::string::npos) {
+                landing_site_search_assess_time = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_strategy") != std::string::npos) {
+                landing_site_search_strategy = sin.str();
+            }
+            if (line.find("landing_site_search_spiral_spacing") != std::string::npos) {
+                landing_site_search_spiral_spacing = std::stod(sin.str());
+            }
+            if (line.find("landing_site_search_spiral_points") != std::string::npos) {
+                landing_site_search_spiral_points = std::stoi(sin.str());
+            }
+
             if (line.find("simple_collision_avoid_enabled") != std::string::npos) {
-                std::cout << "\tsimple_collision_avoid_enabled: " << sin.str() << std::endl;
                 simple_collision_avoid_enabled = std::stoi(sin.str());
             }
             if (line.find("simple_collision_avoid_distance_threshold") != std::string::npos) {
-                std::cout << "\tsimple_collision_avoid_distance_threshold: " << sin.str() << std::endl;
                 simple_collision_avoid_distance_threshold = std::stod(sin.str());
             }
             if (line.find("simple_collision_avoid_action_on_condition_true") != std::string::npos) {
-                std::cout << "\tsimple_collision_avoid_action_on_condition_true: " << sin.str() << std::endl;
                 simple_collision_avoid_action_on_condition_true = sin.str();
             }
             sin.clear();
@@ -311,4 +350,55 @@ bool AutopilotManagerConfig::InitFromFile(const std::string& config_path) {
         std::cerr << "[AutopilotManagerConfig] Unable to open file: " << config_path << std::endl;
         return false;
     }
+}
+
+void AutopilotManagerConfig::Print() const {
+    std::cout << "    autopilot_manager_enabled: " << std::boolalpha << std::to_string(autopilot_manager_enabled)
+              << std::endl;
+    std::cout << "    decision_maker_input_type: " << decision_maker_input_type << std::endl;
+
+    std::cout << "    script_to_call: " << script_to_call << std::endl;
+    std::cout << "    api_call: " << api_call << std::endl;
+    std::cout << "    local_position_offset_x: " << local_position_offset_x << std::endl;
+    std::cout << "    local_position_offset_y: " << local_position_offset_y << std::endl;
+    std::cout << "    local_position_offset_z: " << local_position_offset_z << std::endl;
+    std::cout << "    local_position_waypoint_x: " << local_position_waypoint_x << std::endl;
+    std::cout << "    local_position_waypoint_y: " << local_position_waypoint_y << std::endl;
+    std::cout << "    local_position_waypoint_z: " << local_position_waypoint_z << std::endl;
+    std::cout << "    global_position_offset_lat: " << global_position_offset_lat << std::endl;
+    std::cout << "    global_position_offset_lon: " << global_position_offset_lon << std::endl;
+    std::cout << "    global_position_offset_alt_amsl: " << global_position_offset_alt_amsl << std::endl;
+    std::cout << "    global_position_waypoint_lat: " << global_position_waypoint_lat << std::endl;
+    std::cout << "    global_position_waypoint_lon: " << global_position_waypoint_lon << std::endl;
+    std::cout << "    global_position_waypoint_alt_amsl: " << global_position_waypoint_alt_amsl << std::endl;
+
+    std::cout << "    camera_offset_x: " << camera_offset_x << std::endl;
+    std::cout << "    camera_offset_y: " << camera_offset_y << std::endl;
+    std::cout << "    camera_yaw: " << camera_yaw << std::endl;
+
+    std::cout << "    safe_landing_enabled: " << std::boolalpha << std::to_string(safe_landing_enabled) << std::endl;
+    std::cout << "    safe_landing_area_square_size: " << safe_landing_area_square_size << std::endl;
+    std::cout << "    safe_landing_distance_to_ground: " << safe_landing_distance_to_ground << std::endl;
+    std::cout << "    safe_landing_on_no_safe_land: " << safe_landing_on_no_safe_land << std::endl;
+    std::cout << "    safe_landing_try_landing_after_action: " << std::boolalpha
+              << std::to_string(safe_landing_try_landing_after_action) << std::endl;
+
+    std::cout << "    landing_site_search_max_speed: " << landing_site_search_max_speed << std::endl;
+    std::cout << "    landing_site_search_max_distance: " << landing_site_search_max_distance << std::endl;
+    std::cout << "    landing_site_search_min_height: " << landing_site_search_min_height << std::endl;
+    std::cout << "    landing_site_search_min_distance_after_abort: " << landing_site_search_min_distance_after_abort
+              << std::endl;
+    std::cout << "    landing_site_search_arrival_radius: " << landing_site_search_arrival_radius << std::endl;
+    std::cout << "    landing_site_search_assess_time: " << landing_site_search_assess_time << std::endl;
+    std::cout << "    landing_site_search_strategy: " << landing_site_search_strategy << std::endl;
+
+    std::cout << "    landing_site_search_spiral_spacing: " << landing_site_search_spiral_spacing << std::endl;
+    std::cout << "    landing_site_search_spiral_points: " << landing_site_search_spiral_points << std::endl;
+
+    std::cout << "    simple_collision_avoid_enabled: " << std::boolalpha
+              << std::to_string(simple_collision_avoid_enabled) << std::endl;
+    std::cout << "    simple_collision_avoid_distance_threshold: " << simple_collision_avoid_distance_threshold
+              << std::endl;
+    std::cout << "    simple_collision_avoid_action_on_condition_true: "
+              << simple_collision_avoid_action_on_condition_true << std::endl;
 }

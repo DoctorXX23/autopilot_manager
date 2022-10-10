@@ -43,15 +43,21 @@
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-LandingManager::LandingManager()
+LandingManager::LandingManager(std::shared_ptr<mavsdk::System> mavsdk_system)
     : Node("landing_manager"),
+      _mavsdk_system{std::move(mavsdk_system)},
       _config_update_callback([]() { return LandingManagerConfiguration{}; }),
       _visualize(true),
       _visualizer(std::make_shared<viz::MapVisualizer>(this)),
+      _frequency_mapper("mapper"),
+      _frequency_visualise_map("visualise map"),
+      _timer_stats(create_wall_timer(5s, std::bind(&LandingManager::printStats, this))),
       _timer_mapper({}),
       _timer_map_visualizer({}),
       _state(landing_mapper::eLandingMapperState::UNKNOWN),
-      _height_above_obstacle{0.f} {}
+      _height_above_obstacle{0.f} {
+    _server_utility = std::make_shared<mavsdk::ServerUtility>(_mavsdk_system);
+}
 
 LandingManager::~LandingManager() { deinit(); }
 
@@ -59,21 +65,33 @@ void LandingManager::initParameters() {
     std::unique_lock<std::mutex> lock(landing_manager_config_mtx);
     _landing_manager_config = _config_update_callback();
 
-    _mapper_parameter.max_search_altitude_m = 8.f;
-    _mapper_parameter.max_window_size_m = 5;
-
     _mapper_parameter.search_altitude_m = 7.5f;
     _mapper_parameter.window_size_m = 2.0f;
 
-    _mapper_parameter.distance_threshold_m = 0.1f;
-    _mapper_parameter.neg_peak_tresh = 0.75f;
-    _mapper_parameter.pos_peak_tresh = 0.19f;
-    _mapper_parameter.std_dev_tresh = 0.075f;
-    _mapper_parameter.percentage_of_valid_samples_in_window = 0.7f;
-    _mapper_parameter.voxel_size_m = 0.1f;
+    // Declare supported ROS parameters
+    // Map config
+    this->declare_parameter("max_search_altitude_m");
+    this->declare_parameter("max_window_size_m");
+    this->declare_parameter("voxel_size_m");
+    // Safe-to-land parameters
+    this->declare_parameter("slope_threshold_deg");
+    this->declare_parameter("below_plane_deviation_thresh_m");
+    this->declare_parameter("above_plane_deviation_thresh_m");
+    this->declare_parameter("std_dev_from_plane_thresh_m");
+    this->declare_parameter("percentage_of_valid_samples_in_window");
 
-    std::cout << landingManagerOut << " Square size: " << _mapper_parameter.window_size_m
-              << " | Distance to ground: " << _mapper_parameter.search_altitude_m << std::endl;
+    // Get ROS parameters with defaults
+    // Map config
+    this->get_parameter_or("max_search_altitude_m", _mapper_parameter.max_search_altitude_m, 8);
+    this->get_parameter_or("max_window_size_m", _mapper_parameter.max_window_size_m, 8);
+    this->get_parameter_or("voxel_size_m", _mapper_parameter.voxel_size_m, 0.1f);
+    // Safe-to-land parameters
+    this->get_parameter_or("slope_threshold_deg", _mapper_parameter.slope_threshold_deg, 10.f);
+    this->get_parameter_or("below_plane_deviation_thresh_m", _mapper_parameter.below_plane_deviation_thresh_m, 0.3f);
+    this->get_parameter_or("above_plane_deviation_thresh_m", _mapper_parameter.above_plane_deviation_thresh_m, 0.3f);
+    this->get_parameter_or("std_dev_from_plane_thresh_m", _mapper_parameter.std_dev_from_plane_thresh_m, 0.1f);
+    this->get_parameter_or("percentage_of_valid_samples_in_window",
+                           _mapper_parameter.percentage_of_valid_samples_in_window, 0.7f);
 }
 
 void LandingManager::updateParameters() {
@@ -87,17 +105,15 @@ void LandingManager::updateParameters() {
     }
     if (_landing_manager_config.safe_landing_area_square_size == 0 ||
         !setSearchWindow_m(_landing_manager_config.safe_landing_area_square_size)) {
-        _mapper_parameter.window_size_m = 1.4f;
+        _mapper_parameter.window_size_m = 2.0f;
     }
-
-    // std::cout << landingManagerOut << "Square size: " << __mapper_parameter.window_size_m
-    //           << " | Distance to ground: " << _landing_manager_config.safe_landing_distance_to_ground << std::endl;
 }
 
 void LandingManager::init() {
-    std::cout << landingManagerOut << " Started!" << std::endl;
+    std::cout << landingManagerOut << "Started!" << std::endl;
 
     initParameters();
+    updateParameters();
 
     _mapper = std::make_unique<landing_mapper::LandingMapper<float>>(_mapper_parameter);
 
@@ -121,6 +137,17 @@ void LandingManager::init() {
     // Setup height above obstacle publisher
     _height_above_obstacle_pub =
         this->create_publisher<std_msgs::msg::Float32>("landing_manager/height_above_obstacle", 10);
+
+    // Setup publishers for the height map statistics
+    _valid_sample_percentage_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/valid_sample_percentage", 10);
+    _slope_angle_pub = this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/slope_angle", 10);
+    _above_plane_max_deviation_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/above_plane_max_deviation", 10);
+    _below_plane_max_deviation_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/below_plane_max_deviation", 10);
+    _std_dev_from_plane_pub =
+        this->create_publisher<std_msgs::msg::Float32>("landing_manager/stats/std_dev_from_plane", 10);
 }
 
 auto LandingManager::deinit() -> void {}
@@ -155,6 +182,8 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     static constexpr int16_t MAX_NULL_IMAGE = 5;
     static constexpr int16_t MAX_OLD_TIMESTAMP = 50;
 
+    const auto now = this->now();
+
     bool healthy{true};
 
     struct HealthHandly {
@@ -182,19 +211,39 @@ bool LandingManager::healthCheck(const std::shared_ptr<ExtendedDownsampledImageF
     const bool too_many_null_images = health.count_image_null > MAX_NULL_IMAGE;
     const bool too_many_old_timestamps = health.count_timestamp_old > MAX_OLD_TIMESTAMP;
 
-    // std::cout << "images: " << health.count_image_null << " time: " << health.count_timestamp_old << std::endl;
-
     if (too_many_null_images || too_many_old_timestamps) {
-        std::cerr << landingManagerOut << " Input is unhealthy"
-                  << " count_image_null=" << health.count_image_null
-                  << " count_timestamp_old=" << health.count_timestamp_old << std::endl;
         healthy = false;
+
+        const rclcpp::Duration warning_interval(2, 0);
+        static rclcpp::Time last_warning = this->now();
+        const bool is_exceeded = now > (last_warning + warning_interval);
+
+        if (is_exceeded) {
+            std::stringstream ss;
+            ss << "Input is unhealthy";
+            if (too_many_null_images) {
+                ss << " - NULL-images (" << health.count_image_null << ")";
+            }
+            if (too_many_old_timestamps) {
+                ss << " - Old timestamps (" << health.count_timestamp_old << ")";
+            }
+
+            const std::string error_string = ss.str();
+            RCLCPP_ERROR(get_logger(), error_string.c_str());
+            if (_server_utility) {
+                _server_utility->send_status_text(mavsdk::ServerUtility::StatusTextType::Alert, error_string);
+            }
+
+            last_warning = now;
+        }
     }
 
     return healthy;
 }
 
 void LandingManager::mapper() {
+    _frequency_mapper.tic();
+
     // check for parameter updates
     // TODO: make this call dependent on a dbus param update on the Autopilot Manager
     // instead of running at every loop update
@@ -205,6 +254,8 @@ void LandingManager::mapper() {
     // Only process the data when the Autopilot Manager is enabled and the Safe Landing
     // is set as the Decision Maker Input.
     if (_landing_manager_config.autopilot_manager_enabled && _landing_manager_config.safe_landing_enabled) {
+        timing_tools::Timer timer_mapper("mapper: total", true);
+
         // Here we capture the downsampled depth data computed in the SensorManager
         std::shared_ptr<ExtendedDownsampledImageF> depth_msg = _downsampled_depth_update_callback();
 
@@ -218,6 +269,10 @@ void LandingManager::mapper() {
             const Eigen::Vector3f position = depth_msg->position;
             const Eigen::Quaternionf orientation = depth_msg->orientation;
 
+            _mapper->updateVehiclePosition(position);
+            _mapper->updateVehicleOrientation(orientation);
+
+            timing_tools::Timer timer_pointcloud("point cloud: total     ", true);
             {
                 std::lock_guard<std::mutex> lock(_map_mutex);
                 _pointcloud_for_mapper.clear();
@@ -226,34 +281,53 @@ void LandingManager::mapper() {
                 const Eigen::Vector2f principal_point = intrinsics.principal_point();
                 const Eigen::Vector2f inverse_focal_length = intrinsics.inverse_focal_length();
 
+                timing_tools::Timer timer_pointcloud_depth_to_3D("point cloud: depth->3D ", true);
+                float point_height_min = std::numeric_limits<float>::max();
                 for (const DepthPixelF& depth_pixel : depth_pixel_array) {
                     const float depth = depth_pixel.depth;
 
-                    if (std::isfinite(depth) && (depth > 0.3f) &&
-                        (depth < 7.5f)) {  // TODO make 0.3 and 20.f parameter again
+                    // TODO those ROS2 paramters
+                    const float min_depth_to_use = 0.7f;
+                    const float max_depth_to_use = 16.f;
+                    if (std::isfinite(depth) && (depth > min_depth_to_use)) {
                         Eigen::Matrix<float, 3, 1> point(0.0, 0.0, depth);
                         point.head<2>() = (Eigen::Matrix<float, 2, 1>(depth_pixel.x, depth_pixel.y) - principal_point)
                                               .cwiseProduct(inverse_focal_length) *
                                           depth;
                         point = orientation * point + position;
 
-                        _pointcloud_for_mapper.push_back(point);
-                        _visualizer->add_point_to_point_cloud(point, _visualize);
+                        if (depth < max_depth_to_use) {
+                            _pointcloud_for_mapper.push_back(point);
+                            _visualizer->add_point_to_point_cloud(point, _visualize);
+                        }
+
+                        const float point_height = point(2) - position(2);
+                        if (point_height < point_height_min) {
+                            point_height_min = point_height;
+                        }
                     }
                 }
+                timer_pointcloud_depth_to_3D.stop();
 
+                timing_tools::Timer timer_pointcloud_map_update("point cloud: map update", true);
                 _mapper->updateCloud(_pointcloud_for_mapper);
+                _mapper->setImageHeightEstimate(point_height_min);
+                timer_pointcloud_map_update.stop();
 
                 _visualizer->visualizePointCloud(_visualize);
             }
+            timer_pointcloud.stop();
+
+            _images_processed++;
+            _points_processed += _pointcloud_for_mapper.size();
+            _points_received += intrinsics.rw * intrinsics.rh;
 
             // Find plain ground
-            _mapper->updateVehiclePosition(position);
-            _mapper->updateVehicleOrientation(orientation);
-
+            timing_tools::Timer timer_check_landing_area("check landing area", true);
             Eigen::Vector3f ground_position;
             const landing_mapper::eLandingMapperState state = _mapper->checkLandingArea(ground_position);
             const float height_above_obstacle = _mapper->getHeightAboveObstacle();
+            timer_check_landing_area.stop();
 
             {
                 std::lock_guard<std::mutex> lock(_landing_manager_mutex);
@@ -261,20 +335,22 @@ void LandingManager::mapper() {
                 _height_above_obstacle = height_above_obstacle;
             }
 
-            // Publish the estimated height above obstacle to the ROS side
+            // Publish the estimated height above obstacle
             auto height_above_obstacle_msg = std_msgs::msg::Float32();
             height_above_obstacle_msg.data = height_above_obstacle;
             _height_above_obstacle_pub->publish(height_above_obstacle_msg);
 
-            // Show result
-            visualizeResult(state, ground_position, rclcpp::Time());
-            // std::cout << landingManagerOut << " height " << ground_position.z() - local_state.position.z() <<
-            // std::endl;
+            // Publish ground height stats
+            const height_map::HeightMapStats height_stats = _mapper->getHeightStats();
+            publishHeightStats(height_stats);
 
-        } else if (!healthCheck(depth_msg)) {
+            // Show result
+            visualizeResult(state, ground_position, now());
+            visualizeGroundPlane(height_stats.slope_normal, ground_position, now());
+
+        } else if (!is_landing_mapper_healthy) {
             std::lock_guard<std::mutex> lock(_landing_manager_mutex);
             _state = landing_mapper::eLandingMapperState::UNHEALTHY;
-
         } else {
             std::lock_guard<std::mutex> lock(_landing_manager_mutex);
             if (_state != landing_mapper::eLandingMapperState::CLOSE_TO_GROUND) {
@@ -294,12 +370,33 @@ void LandingManager::mapper() {
 
             _landing_state_pub->publish(landing_state_msg);
         }
+
+        timer_mapper.stop();
     }
+}
+
+void LandingManager::publishHeightStats(const height_map::HeightMapStats& height_stats) const {
+    auto stats_msg = std_msgs::msg::Float32();
+
+    stats_msg.data = height_stats.valid_samples / height_stats.samples * 100.;
+    _valid_sample_percentage_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.slope_deg;
+    _slope_angle_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.above_plane_max_deviation_m;
+    _above_plane_max_deviation_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.below_plane_max_deviation_m;
+    _below_plane_max_deviation_pub->publish(stats_msg);
+
+    stats_msg.data = height_stats.std_dev_from_plane_m;
+    _std_dev_from_plane_pub->publish(stats_msg);
 }
 
 void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, const Eigen::Vector3f& position,
                                      const rclcpp::Time& timestamp) {
-    Eigen::Vector3f vis_position(position[0], position[1], position[2] - 0.5);
+    Eigen::Vector3f vis_position(position[0], position[1], position[2] - 1.0);
     if (state == landing_mapper::eLandingMapperState::CAN_LAND) {
         _visualizer->publishSafeLand(vis_position, timestamp, _mapper_parameter.window_size_m, _visualize);
     } else if (state == landing_mapper::eLandingMapperState::CLOSE_TO_GROUND) {
@@ -309,4 +406,46 @@ void LandingManager::visualizeResult(landing_mapper::eLandingMapperState state, 
     }
 }
 
-void LandingManager::visualizeMap() { _visualizer->visualizeEsdf(_mapper->getEsdf(), now(), _visualize); }
+void LandingManager::visualizeGroundPlane(const Eigen::Vector3f& normal, const Eigen::Vector3f& position,
+                                          const rclcpp::Time& timestamp) {
+    _visualizer->visualizeGroundPlane(normal, position, timestamp, _mapper_parameter.window_size_m, _visualize);
+}
+
+void LandingManager::visualizeMap() {
+    _frequency_visualise_map.tic();
+    timing_tools::Timer timer_visualise_map("visualise map", true);
+    _visualizer->visualizeHeightMap(_mapper->getHeightMap(), now(), _visualize);
+    timer_visualise_map.stop();
+}
+
+void LandingManager::printStats() {
+    std::stringstream ss;
+
+    // Timing stats
+    timing_tools::printTimers(ss);
+    timing_tools::printFrequencies(ss);
+
+    // Image processing stats
+    static constexpr size_t width = 10;
+    float points_per_image = 0.;
+    if (_images_processed) {
+        points_per_image = 1. * _points_processed / _images_processed;
+    }
+    int percent_points = 0.;
+    if (_points_received) {
+        percent_points = 100. * _points_processed / _points_received;
+    }
+    ss << "=== Image processing statistics ===" << std::endl;
+    ss << "Images processed" << std::setw(width) << _images_processed << std::endl;
+    ss << "Points processed" << std::setw(width) << _points_processed << std::endl;
+    ss << "Points / image  " << std::setw(width) << points_per_image << " (" << percent_points << "%)" << std::endl;
+
+    std::cout << std::endl << ss.str() << std::endl;
+
+    // Reset
+    timing_tools::resetTimingStatistics();
+    timing_tools::resetFrequencyStatistics();
+    _images_processed = 0;
+    _points_processed = 0;
+    _points_received = 0;
+}

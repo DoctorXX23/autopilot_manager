@@ -13,15 +13,19 @@ _Note: The host system is considered to run Ubuntu 20.04 Focal. Other OS's might
 1.  ROS 2 Foxy
 2.  MAVSDK (C++ libs)
 3.  `mavlink-router`
-4.  Auterion's `configuration-manager`
-5.  DBUS and Glib
-6.  MAVSDK-Python (optional, to run the available examples)
+4.  Micro XRCE-DDS Agent
+5.  Auterion's `configuration-manager`
+6.  DBUS and Glib
+7.  MAVSDK-Python (optional, to run the available examples)
 
 ### ROS packages and workspace library dependencies
 
-1.  Auterion's `landing_mapper` and `image_downsampler` library packages
-2.  microRTPS bridge, composed by the `px4_msgs` and `px4_ros_com` packages
-3.  Eigen v3.3.9
+1.  Auterion library packages:
+    - `landing_mapper`
+    - `landing_planner`
+    - `image_downsampler`
+    - `timing_tools`
+2.  Eigen v3.3.9
 
 ### ROS 2 Foxy
 
@@ -77,6 +81,11 @@ sudo ldconfig
 
 Please request to Auterion a deb file to install it directly, or follow the instructions in
 <https://github.com/mavlink-router/mavlink-router> to build it and install it from source.
+
+### Micro XRCE-DDS Agent
+
+Micro XRCE-DDS is used to communicate between PX4 and ROS2. For this, the Micro XRCE-DDS Agent from eProsima is required.
+Install the agent using the [official instructions](https://micro-xrce-dds.docs.eprosima.com/en/latest/installation.html#installing-the-agent-standalone).
 
 ### *configuration-manager*
 
@@ -140,33 +149,22 @@ git clone git@github.com:Auterion/autopilot_manager.git src/autopilot_manager
 # Clone the required dependencies
 git clone https://gitlab.com/libeigen/eigen.git -b 3.3.9 src/eigen
 git clone git@github.com:Auterion/image_downsampler.git src/image_downsampler
-git clone git@github.com:Auterion/landing_mapper.git -b develop src/landing_mapper # private repo! Please request access to Auterion or request for the deb package
-git clone git@github.com:Auterion/px4_msgs.git -b develop src/px4_msgs
+git clone git@github.com:Auterion/landing_mapper.git -b develop src/landing_mapper
+git clone git@github.com:Auterion/landing_planner.git
+git clone git@github.com:Auterion/timing_tools.git
 # Build with Release optimizations
 colcon build --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-#### Landing Mapper install
+#### Installing private repos
 
-The `landing_mapper` library is a required component to enable the safe landing feature in the Autopilot Manager. If you are trying to build this repository to use this capability, please contact Auterion to request either access to the `landing_mapper` repository or to a deb package to install the library system-wide.
-
-### *px4_ros_com* as an execution dependency
-
-*px4_ros_com* is required as an execution dependency, since it is through it that the
-`vehicle_odometry` data is streamed to be used by the Sensor Manager.
-
-```bash
-cd colcon_ws
-git clone git@github.com:Auterion/px4_ros_com.git -b develop src/px4_ros_com
-# Build with Release optimizations
-colcon build --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
-```
+Some of the repositories listed above are private but they are required components to enable the safe landing feature in the Autopilot Manager. If you are trying to build this repository to use this capability, please contact Auterion either to request access to the necessary repositories or to a deb package to install the libraries system-wide.
 
 ### *mavlink-router* config
 
-**Warning: if you one installs mavlink-router system-wide, it needs to take into account that it is going to route MAVLink data on the system.**
+**Warning: if one installs mavlink-router system-wide, one needs to take into account that it is going to route MAVLink data on the system.**
 This might influence the behavior of some of some MAVLink-related applications that the user might have
-installed on its system. Use it cautiously, making sure that 1. one enables or disables the systemd service,
+installed on their system. Use it cautiously, making sure that 1. one enables or disables the systemd service,
 i.e., for testing/using this application locally, enable the service with `systemctl enable mavlink-router`,
 and after that, disable it if not using it with `systemctl disable mavlink-router`, or 2. make sure that the
 `main.conf` config file has the correct configuration for all MAVLink endpoints.
@@ -339,8 +337,8 @@ ros2 run autopilot-manager autopilot-manager \
 
 ```bash
 source colcon_ws/install/setup.bash
-# Start the micrortps_agent
-micrortps_agent -t UDP
+# Start the Micro XRCE-DDS Agent
+MicroXRCEAgent udp4 localhost -p 15555
 ```
 
 #### Using ROS2 launch
@@ -386,7 +384,7 @@ ros_cross_compile colcon_ws/src \
   --rosdistro foxy \
   --custom-setup-script colcon_ws/src/autopilot_manager/scripts/cross_compile_dependencies.sh \
   --custom-data-dir /tmp/MAVSDK \
-  --skip-rosdep-keys Eigen3 image_downsampler landing_mapper px4_msgs px4_ros_com \
+  --skip-rosdep-keys Eigen3 image_downsampler landing_mapper landing_planner timing_tools \
   --colcon-defaults ~/colcon_ws/src/autopilot_manager/scripts/packaging/defaults.yaml
 ```
 

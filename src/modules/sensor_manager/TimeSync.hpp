@@ -32,46 +32,54 @@
  ****************************************************************************/
 
 /**
- * @brief Autopilot Manager main
- * @file main.cpp
- * @author Nuno Marques <nuno@auterion.com>
+ * @brief Time Sync
+ * @file TimeSync.hpp
+ * @author Bastian Jäger <bastian@auterion.com>
  */
 
-#include <AutopilotManager.hpp>
-#include <DbusInterface.hpp>
-#include <helpers.hpp>
-#include <rclcpp/rclcpp.hpp>
+#pragma once
 
-constexpr uint32_t mavlink_router_port = 14590;
+#include <common.h>
 
-auto main(int argc, char* argv[]) -> int {
-    uint32_t mavlink_port{mavlink_router_port};
-    std::string path_to_apm_config_file{"/shared_container_dir/autopilot-manager/data/config/autopilot_manager.conf"};
-    std::string path_to_custom_action_file{
-        "/shared_container_dir/autopilot-manager/data/custom_action/custom_action.json"};
+#include <chrono>
+#include <iostream>
 
-    // Initialize communications via the rmw implementation and set up a global signal handler.
-    rclcpp::init(argc, argv, rclcpp::InitOptions());
+static constexpr double ALPHA_GAIN_INITIAL = 0.05;
+static constexpr double BETA_GAIN_INITIAL = 0.05;
+static constexpr double ALPHA_GAIN_FINAL = 0.003;
+static constexpr double BETA_GAIN_FINAL = 0.003;
 
-    // Uninstall the global signal handler for rclcpp
-    rclcpp::uninstall_signal_handlers();
+static constexpr uint32_t CONVERGENCE_WINDOW = 250;
+static constexpr uint64_t MAX_RTT_SAMPLE = 10 * 1000;
+static constexpr uint64_t MAX_DEVIATION_SAMPLE = 100 * 1000;
+static constexpr uint32_t MAX_CONSECUTIVE_HIGH_DEVIATION = 5;
 
-    // Init main event loop for GLib/DBUS
-    GMainLoop* mainloop = g_main_loop_new(nullptr, static_cast<gboolean>(false));
+class TimeSync {
+   public:
+    TimeSync();
+    ~TimeSync();
+    TimeSync(const TimeSync&) = delete;
+    auto operator=(const TimeSync&) -> const TimeSync& = delete;
 
-    // Extract paths to config files
-    // WARNING: This alters the ordering of argv
-    parse_argv(argc, argv, mavlink_port, path_to_apm_config_file, path_to_custom_action_file);
+    void run(int64_t _ts1, int64_t _tc1, uint64_t _now_us);
+    uint64_t sync_stamp(uint64_t usec, uint64_t _now_us);
 
-    auto autopilot_manager = std::make_shared<AutopilotManager>(std::to_string(mavlink_port), path_to_apm_config_file,
-                                                                path_to_custom_action_file);
+   private:
+    bool sync_converged();
+    void reset_filter();
+    void add_sample(int64_t offset_us);
 
-    // Register autopilot_manager dbus requests
-    DBusInterface dbus([autopilot_manager](DBusMessage* request) { return autopilot_manager->HandleRequest(request); });
+    uint32_t _sequence{0};
 
-    g_main_loop_run(mainloop);
+    // Timesync statistics
+    double _time_offset{0};
+    double _time_skew{0};
 
-    rclcpp::shutdown();
+    // Filter parameters
+    double _filter_alpha{ALPHA_GAIN_INITIAL};
+    double _filter_beta{BETA_GAIN_INITIAL};
 
-    return 0;
-}
+    // Outlier rejection and filter reset
+    uint32_t _high_deviation_count{0};
+    uint32_t _high_rtt_count{0};
+};
