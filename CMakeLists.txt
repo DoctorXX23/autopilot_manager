@@ -10,6 +10,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 find_package(MAVSDK REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -61,6 +63,7 @@ target_link_libraries(
     ${DBUS_LIBRARIES}
     ${LIBDBUS_LDFLAGS}
     tbb
+    Threads::Threads
 )
 
 target_include_directories(autopilot-manager
