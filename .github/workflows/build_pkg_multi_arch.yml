@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        ros2_distro: [foxy, galactic]
+        ros2_distro: [foxy]
         arch: [x86_64, aarch64]
     steps:
       - uses: actions/checkout@v2
@@ -66,11 +66,6 @@ jobs:
       - name: Fetch source dependencies
         working-directory: /tmp/colcon_ws/src/autopilot_manager
         run: |
-          if [ ${{ matrix.ros2_distro }} == 'galactic' ]
-          then
-            cp .rosinstall.galactic .rosinstall
-            echo "Using source dependencies for ROS2 Galactic"
-          fi
           rosws update -t .
       - name: Setup source dependencies in develop mode
         if: github.event_name == 'pull_request' && github.base_ref != 'main'
