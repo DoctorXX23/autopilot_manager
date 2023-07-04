@@ -17,30 +17,31 @@ find_package(MAVSDK REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
-find_package(landing_mapper REQUIRED)
-find_package(landing_planner REQUIRED)
-find_package(timing_tools REQUIRED)
+#find_package(landing_mapper REQUIRED)
+#find_package(landing_planner REQUIRED)
+#find_package(timing_tools REQUIRED)
 
 add_library(
     mission-manager SHARED
     MissionManager.cpp
     CustomActionHandler.cpp
 )
-ament_target_dependencies(mission-manager
-  timing_tools
-)
+#ament_target_dependencies(mission-manager
+#  timing_tools
+#)
+
 target_link_libraries(mission-manager
-    MAVSDK::mavsdk_action
-    MAVSDK::mavsdk_custom_action
-    MAVSDK::mavsdk_mission_raw
-    MAVSDK::mavsdk_param
-    MAVSDK::mavsdk_server_utility
-    MAVSDK::mavsdk_telemetry
-    MAVSDK::mavsdk_mavlink_passthrough
+#   MAVSDK::mavsdk_action
+#   MAVSDK::mavsdk_custom_action
+#   MAVSDK::mavsdk_mission_raw
+#   MAVSDK::mavsdk_param
+#   MAVSDK::mavsdk_server_utility
+#   MAVSDK::mavsdk_telemetry
+#   MAVSDK::mavsdk_mavlink_passthrough
     MAVSDK::mavsdk
     Eigen3::Eigen
-    landing_mapper
-    landing_planner
+#   landing_mapper
+#   landing_planner
     ${rclcpp_LIBRARIES}
 )
 
@@ -48,7 +49,7 @@ target_include_directories(mission-manager PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/autopilot_manager/mission_manager>
     ${Eigen3_INCLUDE_DIRS}
-    ${landing_planner_INCLUDE_DIRS}
+#   ${landing_planner_INCLUDE_DIRS}
 )
 
 install(TARGETS mission-manager

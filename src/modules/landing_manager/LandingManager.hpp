@@ -41,7 +41,7 @@
 #pragma once
 
 #include <common.h>
-#include <timing_tools/timing_tools.h>
+//#include <timing_tools/timing_tools.h>
 
 #include <Eigen/Core>
 #include <ModuleBase.hpp>
@@ -51,7 +51,7 @@
 
 // ROS dependencies
 #include <MapVisualizer.hpp>
-#include <landing_mapper/LandingMapper.hpp>
+//#include <landing_mapper/LandingMapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/float32.hpp>

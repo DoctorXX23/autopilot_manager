@@ -17,27 +17,30 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
-find_package(image_downsampler REQUIRED)
+#find_package(image_downsampler REQUIRED)
 
 #################
 # Setup targets #
 #################
 
 add_library(collision-avoidance-manager SHARED CollisionAvoidanceManager.cpp)
+
 ament_target_dependencies(collision-avoidance-manager
   Eigen3
-  image_downsampler
+# image_downsampler
 )
+
 target_include_directories(collision-avoidance-manager PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
   $<INSTALL_INTERFACE:include/autopilot-manager/${PROJECT_NAME}>
   ${Eigen3_INCLUDE_DIRS}
   ${rclcpp_INCLUDE_DIRS}
 )
+
 target_link_libraries(collision-avoidance-manager
   Eigen3::Eigen
   ${rclcpp_LIBRARIES}
-  ${image_downsampler_LIBRARIES}
+# ${image_downsampler_LIBRARIES}
 )
 
 ############

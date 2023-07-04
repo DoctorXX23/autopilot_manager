@@ -39,17 +39,17 @@
 
 #pragma once
 
-#include <timing_tools/timing_tools.h>
+//#include <timing_tools/timing_tools.h>
 
-#include <CustomActionHandler.hpp>
+//#include <CustomActionHandler.hpp>
 #include <Eigen/Eigen>
 #include <ModuleBase.hpp>
 #include <ObstacleAvoidanceModule.hpp>
 #include <atomic>
 #include <future>
 #include <iostream>
-#include <landing_mapper/LandingMapper.hpp>
-#include <landing_planner/LandingPlanner.hpp>
+//#include <landing_mapper/LandingMapper.hpp>
+//#include <landing_planner/LandingPlanner.hpp>
 #include <string>
 
 // MAVSDK dependencies
@@ -67,7 +67,8 @@
 
 static constexpr auto missionManagerOut = "[Mission Manager] ";
 
-class MissionManager : public rclcpp::Node, public ObstacleAvoidanceModule, ModuleBase {
+class MissionManager : public rclcpp::Node, public ObstacleAvoidanceModule, ModuleBase 
+{
    public:
     MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system, const std::string& path_to_custom_action_file);
     ~MissionManager();
@@ -78,7 +79,8 @@ class MissionManager : public rclcpp::Node, public ObstacleAvoidanceModule, Modu
     void deinit() override;
     void run() override;
 
-    struct MissionManagerConfiguration {
+    struct MissionManagerConfiguration 
+    {
         uint8_t autopilot_manager_enabled = 0U;
         std::string decision_maker_input_type = "";
 
@@ -125,23 +127,28 @@ class MissionManager : public rclcpp::Node, public ObstacleAvoidanceModule, Modu
         std::string simple_collision_avoid_action_on_condition_true = "";
     };
 
-    void setConfigUpdateCallback(std::function<MissionManagerConfiguration()> callback) {
+    void setConfigUpdateCallback(std::function<MissionManagerConfiguration()> callback) 
+    {
         _config_update_callback = callback;
     }
 
-    void getDistanceToObstacleCallback(std::function<float()> callback) {
+    void getDistanceToObstacleCallback(std::function<float()> callback) 
+    {
         _distance_to_obstacle_update_callback = callback;
     }
 
-    void getCanLandStateCallback(std::function<landing_mapper::eLandingMapperState()> callback) {
+    void getCanLandStateCallback(std::function<landing_mapper::eLandingMapperState()> callback) 
+    {
         _landing_condition_state_update_callback = callback;
     }
 
-    void getCanLandAtPositionStateCallback(std::function<uint8_t(float x, float y)> callback) {
+    void getCanLandAtPositionStateCallback(std::function<uint8_t(float x, float y)> callback) 
+    {
         _landing_planner.setLandingStateAtPositionCallback(callback);
     }
 
-    void getHeightAboveObstacleCallback(std::function<float()> callback) {
+    void getHeightAboveObstacleCallback(std::function<float()> callback) 
+    {
         _height_above_obstacle_update_callback = callback;
     }
 
@@ -179,8 +186,10 @@ class MissionManager : public rclcpp::Node, public ObstacleAvoidanceModule, Modu
 
     mavsdk::geometry::CoordinateTransformation::LocalCoordinate get_local_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
+
     mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_position(
         mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position) const;
+        
     mavsdk::geometry::CoordinateTransformation::GlobalCoordinate get_global_position_from_local_offset(
         const double& offset_x, const double& offset_y) const;
 

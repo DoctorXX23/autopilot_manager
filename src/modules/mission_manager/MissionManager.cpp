@@ -87,7 +87,8 @@ MissionManager::MissionManager(std::shared_ptr<mavsdk::System> mavsdk_system,
 
 MissionManager::~MissionManager() { deinit(); }
 
-void MissionManager::init() {
+void MissionManager::init()
+{
     std::cout << missionManagerOut << "Started!" << std::endl;
 
     // Actions are processed and executed in the Mission Manager decion maker
@@ -104,11 +105,11 @@ void MissionManager::init() {
 
     _mavlink_passthrough = std::make_shared<mavsdk::MavlinkPassthrough>(_mavsdk_system);
 
-    _custom_action_handler =
-        std::make_shared<CustomActionHandler>(_mavsdk_system, _telemetry, _path_to_custom_action_file);
+    _custom_action_handler = std::make_shared<CustomActionHandler>(_mavsdk_system, _telemetry, _path_to_custom_action_file);
 }
 
-void MissionManager::deinit() {
+void MissionManager::deinit()
+{
     int_signal.store(true, std::memory_order_relaxed);
 
     _decision_maker_th.join();
@@ -116,7 +117,8 @@ void MissionManager::deinit() {
     _custom_action_handler.reset();
 }
 
-void MissionManager::run() {
+void MissionManager::run()
+{
     // Start the desicion maker thread
     _decision_maker_th = std::thread(&MissionManager::decision_maker_run, this);
 
@@ -124,18 +126,20 @@ void MissionManager::run() {
     _global_origin_reference_th = std::thread(&MissionManager::set_global_position_reference, this);
 
     // Start custom action handler
-    if (_custom_action_handler->start()) {
+    if(_custom_action_handler->start())
+    {
         _custom_action_handler->run();
     }
 
-    _mavlink_passthrough->subscribe_message_async(MAVLINK_MSG_ID_TRAJECTORY_REPRESENTATION_WAYPOINTS,
-                                                  std::bind(&MissionManager::on_mavlink_trajectory_message, this, _1));
+    _mavlink_passthrough->subscribe_message_async(MAVLINK_MSG_ID_TRAJECTORY_REPRESENTATION_WAYPOINTS, std::bind(&MissionManager::on_mavlink_trajectory_message, this, _1));
 
     rclcpp::spin(shared_from_this());
 }
 
-void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _message) {
-    if (_message.compid == MAV_COMP_ID_OBSTACLE_AVOIDANCE) {
+void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _message)
+{
+    if(_message.compid == MAV_COMP_ID_OBSTACLE_AVOIDANCE) 
+    {
         return;
     }
 
@@ -143,19 +147,23 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
 
     const bool is_pos_valid = std::isfinite(_new_x) && std::isfinite(_new_y) && std::isfinite(_new_yaw);
     const bool is_valid = _landing_planner.isActive() && is_pos_valid;
-    if (is_valid) {
+    if(is_valid)
+    {
         // The Landing Planner wants to set an alternative waypoint.
         // Construct and send the appropriate trajectory message.
         mavlink_trajectory_representation_waypoints_t wp_message;
         mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
-        if (_landing_planner.shouldLand()) {
+        if(_landing_planner.shouldLand())
+        {
             // Vehicle should land: command a downward velocity
 
             // Determine landing speed
             const float height_above_obstacle = _height_above_obstacle_update_callback();
             float land_velocity = _landing_speed;
-            if (height_above_obstacle < _landing_crawl_altitude) {
+
+            if(height_above_obstacle < _landing_crawl_altitude)
+            {
                 land_velocity = _landing_crawl_speed;
             }
 
@@ -169,13 +177,16 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             wp_message.vel_y[0] = NAN;
             wp_message.vel_z[0] = land_velocity;
 
-            if (DEBUG_PRINT) {
+            if (DEBUG_PRINT)
+            {
                 std::stringstream ss;
                 ss << "[OA] " << std::fixed << std::setprecision(3) << "Land: [" << _new_x << ", " << _new_y << "]"
                    << "  v=" << land_velocity << "  h=" << height_above_obstacle;
                 std::cout << ss.str() << std::endl;
             }
-        } else {
+        } 
+        else
+        {
             // Not landing: command a horizontal velocity to follow the search pattern
 
             std::unique_lock<std::mutex> lock(mission_manager_config_mtx);
@@ -201,7 +212,8 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
             wp_message.vel_y[0] = -vel.y();
             wp_message.vel_z[0] = NAN;
 
-            if (DEBUG_PRINT) {
+            if (DEBUG_PRINT)
+            {
                 const float d_x = abs(_current_pos_x - _new_x);
                 const float d_y = abs(_current_pos_y - _new_y);
                 std::stringstream ss;
@@ -215,20 +227,24 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
         mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
                                                                &corrected_traj_message, &wp_message);
         _mavlink_passthrough->send_message(corrected_traj_message);
-    } else {
+    }
+    else
+    {
         // The Landing Planner is not active and an alternative wayppoint has not been set.
         // Send the trajectory message back with no change.
         mavlink_trajectory_representation_waypoints_t wp_message;
         mavlink_msg_trajectory_representation_waypoints_decode(&_message, &wp_message);
 
         mavlink_message_t forwarded_traj_message;
-        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE,
-                                                               &forwarded_traj_message, &wp_message);
+        mavlink_msg_trajectory_representation_waypoints_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &forwarded_traj_message, &wp_message);
+
         _mavlink_passthrough->send_message(forwarded_traj_message);
     }
+
     _frequency_traj.tic();
 
-    if (DEBUG_PRINT) {
+    if (DEBUG_PRINT)
+    {
         std::cout << "[OA] traj received:"
                   << " flight mode='" << _flight_mode << "'"
                   << " landed state='" << _landed_state << "'"
@@ -240,12 +256,14 @@ void MissionManager::on_mavlink_trajectory_message(const mavlink_message_t& _mes
 /* Check whether obstacle avoidance is enabled in PX4 by checking that
  * desired trajectory waypoints are being received from PX4.
  */
-void MissionManager::update_obstacle_avoidance_status() {
+void MissionManager::update_obstacle_avoidance_status()
+{
     const auto ros_now = this->get_clock()->now();
     const auto s_since_last_traj = (ros_now - _time_last_traj).seconds();
     const bool received_recent_trajectory_message = s_since_last_traj < 0.5f;
 
-    if (is_obstacle_avoidance_enabled() == received_recent_trajectory_message) {
+    if(is_obstacle_avoidance_enabled() == received_recent_trajectory_message)
+    {
         // No change in OA-enabled status
         return;
     }
@@ -253,8 +271,10 @@ void MissionManager::update_obstacle_avoidance_status() {
     set_obstacle_avoidance_enabled(received_recent_trajectory_message);
 }
 
-void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode) {
-    if (flight_mode != _flight_mode) {
+void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& flight_mode)
+{
+    if(flight_mode != _flight_mode)
+    {
         _flight_mode = flight_mode;
 
         // Reset safe landing on new flights or when in manual control
@@ -266,36 +286,50 @@ void MissionManager::flight_mode_callback(const mavsdk::Telemetry::FlightMode& f
 
         // Determine reason for reset (or to not reset)
         std::stringstream reason;
-        if (is_taking_off && expecting_auto_takeoff) {
+        if(is_taking_off && expecting_auto_takeoff)
+        {
             reason << "Expecting take-off: mode changed to '" << _flight_mode << "' while '" << _landed_state << "'.";
-        } else if (switched_to_manual_mode) {
+        }
+        else if(switched_to_manual_mode)
+        {
             reason << "Changed to manual mode '" << _flight_mode << "'.";
-        } else {
+        } 
+        else
+        {
             // Don't reset
             return;
         }
 
         // Do reset
-        if (_landing_planner.isActive()) {
+        if(_landing_planner.isActive())
+        {
             // End search cleanly
             std::cout << std::string(missionManagerOut) << "Ending Landing Site Search after flight mode change."
                       << std::endl;
+
             _landing_planner.endSearch();
+
             landing_site_search_has_ended("MODE");
         }
+
         std::cout << std::string(missionManagerOut) << "Resetting Landing Planner. " << reason.str() << std::endl;
+
         _landing_planner.reset();
     }
 }
 
-void MissionManager::set_global_position_reference() {
-    while (!int_signal) {
+void MissionManager::set_global_position_reference()
+{
+    while(!int_signal)
+    {
         std::string status{};
         // Get global origin to set the reference global position
         auto cmd_result = _telemetry->get_gps_global_origin();
 
-        if (cmd_result.first == mavsdk::Telemetry::Result::Success) {
-            if (!_global_origin_reference_set) {
+        if(cmd_result.first == mavsdk::Telemetry::Result::Success)
+        {
+            if(!_global_origin_reference_set)
+            {
                 std::cout << std::string(missionManagerOut)
                           << "Successfully received a GPS_GLOBAL_ORIGIN MAVLink message" << std::endl;
             }
@@ -303,14 +337,16 @@ void MissionManager::set_global_position_reference() {
             const bool lat_valid = cmd_result.second.latitude_deg != 0.0;
             const bool lon_valid = cmd_result.second.longitude_deg != 0.0;
 
-            if (lat_valid && lon_valid) {
+            if(lat_valid && lon_valid)
+            {
                 const bool lat_changed = _ref_latitude.load() != cmd_result.second.latitude_deg;
                 const bool lon_changed = _ref_longitude.load() != cmd_result.second.longitude_deg;
                 const bool alt_changed = _ref_altitude.load() != cmd_result.second.altitude_m;
 
                 const bool ori_changed = lat_changed || lon_changed || alt_changed;
 
-                if (ori_changed) {
+                if(ori_changed)
+                {
                     _ref_latitude.store(cmd_result.second.latitude_deg);
                     _ref_longitude.store(cmd_result.second.longitude_deg);
                     _ref_altitude.store(cmd_result.second.altitude_m);
@@ -323,100 +359,129 @@ void MissionManager::set_global_position_reference() {
 
                     _global_origin_reference_set = true;
                 }
-            } else {
-                if (!_global_origin_reference_set) {
+            } 
+            else 
+            {
+                if(!_global_origin_reference_set)
+                {
                     status = std::string(missionManagerOut) +
                              "Failed to set the global origin reference because the received values are invalid.";
                 }
             }
 
-        } else if (cmd_result.first == mavsdk::Telemetry::Result::Timeout) {
+        } 
+        else if(cmd_result.first == mavsdk::Telemetry::Result::Timeout)
+        {
             status = std::string(missionManagerOut) +
                      "GPS_GLOBAL_ORIGIN stream request timeout. Message not yet received. Retrying...";
-        } else {
+        }
+        else
+        {
             status = std::string(missionManagerOut) + "GPS_GLOBAL_ORIGIN stream request failed. Retrying...";
         }
 
-        if (status != "") {
+        if(status != "")
+        {
             std::cout << status << std::endl;
         }
+
         std::this_thread::sleep_for(gps_origin_update_interval);
     }
 }
 
-mavsdk::geometry::CoordinateTransformation::LocalCoordinate MissionManager::get_local_position_from_local_offset(
-    const double& offset_x, const double& offset_y) const {
+mavsdk::geometry::CoordinateTransformation::LocalCoordinate MissionManager::get_local_position_from_local_offset(const double& offset_x, const double& offset_y) const 
+{
     // Given an offset in body-frame x and y, compute the local position
     const double local_position_x =
         (std::cos(_current_yaw) * offset_x - std::sin(_current_yaw) * offset_y) + _current_pos_x;
+
     const double local_position_y =
         (std::sin(_current_yaw) * offset_x + std::cos(_current_yaw) * offset_y) + _current_pos_y;
+
     return mavsdk::geometry::CoordinateTransformation::LocalCoordinate{local_position_x, local_position_y};
 }
 
 mavsdk::geometry::CoordinateTransformation::GlobalCoordinate MissionManager::get_global_position_from_local_position(
-    mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position) const {
+    mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position) const 
+{
     const mavsdk::geometry::CoordinateTransformation ct({_ref_latitude, _ref_longitude});
+
     return ct.global_from_local(local_position);
 }
 
-mavsdk::geometry::CoordinateTransformation::GlobalCoordinate MissionManager::get_global_position_from_local_offset(
-    const double& offset_x, const double& offset_y) const {
+mavsdk::geometry::CoordinateTransformation::GlobalCoordinate MissionManager::get_global_position_from_local_offset(const double& offset_x, const double& offset_y) const
+{
     const mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_position =
         get_local_position_from_local_offset(offset_x, offset_y);
+
     return get_global_position_from_local_position(local_position);
 }
 
-void MissionManager::set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl) {
+void MissionManager::set_new_waypoint(const double& lat, const double& lon, const double& alt_amsl) 
+{
     _new_latitude = lat;
     _new_longitude = lon;
     _new_altitude_amsl = alt_amsl;
 }
 
-bool MissionManager::arrived_to_new_waypoint() {
-    if ((std::abs(_new_latitude - _current_latitude) <= 1.0E-5) &&
+bool MissionManager::arrived_to_new_waypoint()
+{
+    if((std::abs(_new_latitude - _current_latitude) <= 1.0E-5) &&
         (std::abs(_new_longitude - _current_longitude) <= 1.0E-5) &&
-        (std::abs(_new_altitude_amsl - _current_altitude_amsl) <= 1.0)) {  // ~1 meter acceptance radius
+        (std::abs(_new_altitude_amsl - _current_altitude_amsl) <= 1.0)) 
+    {  // ~1 meter acceptance radius
         return true;
     }
 
     return false;
 }
 
-void MissionManager::set_new_local_waypoint(const double& x, const double& y, const double& yaw) {
+void MissionManager::set_new_local_waypoint(const double& x, const double& y, const double& yaw) 
+{
     // Set a waypoint that the OA interface should send to PX4
     _new_x = x;
     _new_y = y;
     _new_yaw = yaw;
 }
 
-void MissionManager::go_to_new_local_waypoint(
-    mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint) {
+void MissionManager::go_to_new_local_waypoint(mavsdk::geometry::CoordinateTransformation::LocalCoordinate local_waypoint) 
+{
     set_new_local_waypoint(local_waypoint.north_m, local_waypoint.east_m, _current_yaw);
 }
 
-bool MissionManager::is_stationary() {
+bool MissionManager::is_stationary() 
+{
     static const double vel_tol = 0.5;
+
     const double vel_mag =
         std::sqrt(std::pow(_current_vel_x, 2) + std::pow(_current_vel_y, 2) + std::pow(_current_vel_z, 2));
+
     return debounce_is_stationary(vel_mag < vel_tol);
 }
 
-bool MissionManager::debounce_is_stationary(bool is_stationary) {
+bool MissionManager::debounce_is_stationary(bool is_stationary) 
+{
     // The purpose of the debouncing is not only to prevent multiple triggers, but also to include a delay between when
     // the vehicle stops and when it is allowed to process any actions. This gives the landing site detection
     // time to assess the ground below the stopping point.
     static const int DEBOUNCE_COUNT_REQUIRED = 10;
-    if (is_stationary) {
+
+    if(is_stationary)
+    {
         _is_stationary_debounce_counter++;
-        if (_is_stationary_debounce_counter >= DEBOUNCE_COUNT_REQUIRED) {
+
+        if(_is_stationary_debounce_counter >= DEBOUNCE_COUNT_REQUIRED) 
+        {
             // Vehicle is confirmed to be stationary
             _is_stationary_debounce_counter = 0;
             return true;
         }
-    } else {
+    } 
+    else 
+    {
         _is_stationary_debounce_counter = 0;
     }
+    
     return false;
 }
 

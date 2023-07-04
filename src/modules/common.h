@@ -46,12 +46,12 @@ inline static const std::string NED_FRAME = "ned";
 inline static const std::string BASE_LINK_FRAME = "base_link";
 inline static const std::string CAMERA_LINK_FRAME = "camera_link";
 
-#include <image_downsampler/DataTypes.h>
-#include <image_downsampler/ImageDownsampler.h>
+//#include <image_downsampler/DataTypes.h>
+//#include <image_downsampler/ImageDownsampler.h>
 
 template <typename T>
 struct ExtendedDownsampledImage {
-    DownsampledImage<T> downsampled_image;
+    /*DownsampledImage<T> downsampled_image;*/
 
     Eigen::Vector3f position;
     Eigen::Quaternionf orientation;
