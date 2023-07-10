@@ -49,13 +49,15 @@ AutopilotManager::AutopilotManager(const std::string& mavlinkPort, const std::st
     : _obstacle_avoidance_enabled(false),
       _mavlink_port(mavlinkPort),
       _config_path(configPath.empty() ? _config_path : configPath),
-      _custom_action_config_path(customActionConfigPath.empty() ? _custom_action_config_path : customActionConfigPath) {
+      _custom_action_config_path(customActionConfigPath.empty() ? _custom_action_config_path : customActionConfigPath)
+{
     initialProvisioning();
 
     start();
 }
 
-AutopilotManager::~AutopilotManager() {
+AutopilotManager::~AutopilotManager()
+{
     _interrupt_received.store(true, std::memory_order_relaxed);
 
     _sensor_manager_th.join();
@@ -101,18 +103,23 @@ auto AutopilotManager::HandleRequest(DBusMessage* request) -> DBusMessage* {
     return reply;
 }
 
-void AutopilotManager::initialProvisioning() {
+void AutopilotManager::initialProvisioning()
+{
     AutopilotManagerConfig config;
-    if (config.InitFromFile(_config_path)) {
+    if (config.InitFromFile(_config_path))
+    {
         config.Print();
         ResponseCode response_code = SetConfiguration(config);
         std::cout << "[Autopilot Manager] Initial provisioning finished with code " << response_code << std::endl;
-    } else {
+    } 
+    else 
+    {
         std::cout << "[Autopilot Manager] Failed to init default config from " << _config_path << std::endl;
     }
 }
 
-auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> AutopilotManager::ResponseCode {
+auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> AutopilotManager::ResponseCode
+{
     std::lock_guard<std::mutex> lock(_config_mutex);
 
     // General configurations
@@ -181,7 +188,8 @@ auto AutopilotManager::SetConfiguration(AutopilotManagerConfig config) -> Autopi
     return ResponseCode::UNKNOWN;
 }
 
-auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> AutopilotManager::ResponseCode {
+auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> AutopilotManager::ResponseCode
+{
     std::lock_guard<std::mutex> lock(_config_mutex);
 
     // General configurations
@@ -233,16 +241,25 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     config.simple_collision_avoid_distance_threshold = _simple_collision_avoid_distance_threshold;
     config.simple_collision_avoid_action_on_condition_true = _simple_collision_avoid_action_on_condition_true;
 
-    if (config.decision_maker_input_type == "SAFE_LANDING") {
-        if (!config.safe_landing_enabled) {
+    if(config.decision_maker_input_type == "SAFE_LANDING")
+    {
+        if(!config.safe_landing_enabled) 
+        {
             return ResponseCode::SUCCEED_WITH_SAFE_LANDING_OFF;
-        } else {
+        } 
+        else 
+        {
             return ResponseCode::SUCCEED_WITH_SAFE_LANDING_ON;
         }
-    } else if (config.decision_maker_input_type == "SIMPLE_COLLISION_AVOIDANCE") {
-        if (!config.simple_collision_avoid_enabled) {
+    }
+    else if(config.decision_maker_input_type == "SIMPLE_COLLISION_AVOIDANCE")
+    {
+        if (!config.simple_collision_avoid_enabled) 
+        {
             return ResponseCode::SUCCEED_WITH_COLL_AVOID_OFF;
-        } else {
+        } 
+        else 
+        {
             return ResponseCode::SUCCEED_WITH_COLL_AVOID_ON;
         }
     }
@@ -250,7 +267,8 @@ auto AutopilotManager::GetConfiguration(AutopilotManagerConfig config) -> Autopi
     return ResponseCode::UNKNOWN;
 }
 
-void AutopilotManager::start() {
+void AutopilotManager::start()
+{
     // Configure MAVSDK Mission Manager instance
     // Change configuration so the instance is treated as a mission computer
     mavsdk::Mavsdk::Configuration configuration(kDefaultSystemId, kMavCompIDOnBoardComputer3, true);
@@ -258,17 +276,20 @@ void AutopilotManager::start() {
     _mavsdk_mission_computer.set_configuration(configuration);
 
     mavsdk::ConnectionResult ret_comp = _mavsdk_mission_computer.add_any_connection("udp://:" + _mavlink_port);
-    if (ret_comp == mavsdk::ConnectionResult::Success) {
+    if(ret_comp == mavsdk::ConnectionResult::Success) 
+    {
         std::cout << "[Autopilot Manager] Waiting to discover vehicle from the mission computer side..." << std::endl;
         auto prom = std::promise<std::shared_ptr<mavsdk::System>>{};
         auto fut = prom.get_future();
 
         // We wait for new systems to be discovered, and use the one that has an autopilot
-        _mavsdk_mission_computer.subscribe_on_new_system([&prom, this]() {
+        _mavsdk_mission_computer.subscribe_on_new_system([&prom, this]() 
+        {
             const auto systems = _mavsdk_mission_computer.systems();
-            auto system_it =
-                std::find_if(systems.cbegin(), systems.cend(), [&](const auto& sys) { return sys->has_autopilot(); });
-            if (system_it != systems.cend()) {
+            auto system_it = std::find_if(systems.cbegin(), systems.cend(), [&](const auto& sys) { return sys->has_autopilot(); });
+
+            if(system_it != systems.cend())
+            {
                 std::cout << "[Autopilot Manager] Discovered autopilot!\n";
                 prom.set_value(*system_it);
                 // Unsubscribe again as we only want to find one system.
@@ -278,7 +299,8 @@ void AutopilotManager::start() {
 
         // Usually receives heartbeats at 1Hz, therefore it should find a
         // system after around 3 seconds. 10 secs is defined as a max to wait
-        if (fut.wait_for(std::chrono::seconds(10)) == std::future_status::timeout) {
+        if(fut.wait_for(std::chrono::seconds(10)) == std::future_status::timeout)
+        {
             std::cerr << "[Autopilot Manager] No autopilot found, exiting...\n";
             exit(1);
         }
@@ -288,8 +310,8 @@ void AutopilotManager::start() {
 
         // Start modules
         start_sensor_manager(system);
-        start_collision_avoidance_manager();
-        start_landing_manager(system);
+        //start_collision_avoidance_manager();
+        //start_landing_manager(system);
         start_mission_manager(system);
 
         // MAVLink passthrough
@@ -301,23 +323,28 @@ void AutopilotManager::start() {
         // Run the main Autopilot Manager main loop
         run();
 
-    } else {
+    }
+    else
+    {
         std::cerr << "[Autopilot Manager] Failed to connect to port! Exiting..." << _mavlink_port << std::endl;
         exit(1);
     }
 }
 
-void AutopilotManager::start_sensor_manager(std::shared_ptr<mavsdk::System> mavsdk_system) {
+void AutopilotManager::start_sensor_manager(std::shared_ptr<mavsdk::System> mavsdk_system) 
+{
     _sensor_manager = std::make_shared<SensorManager>(mavsdk_system);
     _sensor_manager->init();
     _sensor_manager->set_camera_static_tf(_camera_offset_x, _camera_offset_y, _camera_yaw);
     _sensor_manager_th = std::thread(&AutopilotManager::run_sensor_manager, this);
 }
 
-void AutopilotManager::start_collision_avoidance_manager() {
-    _collision_avoidance_manager = std::make_shared<CollisionAvoidanceManager>();
+void AutopilotManager::start_collision_avoidance_manager() 
+{
+    /*_collision_avoidance_manager = std::make_shared<CollisionAvoidanceManager>();
 
-    _collision_avoidance_manager->setConfigUpdateCallback([this]() {
+    _collision_avoidance_manager->setConfigUpdateCallback([this]() 
+    {
         std::lock_guard<std::mutex> lock(_config_mutex);
 
         CollisionAvoidanceManager::CollisionAvoidanceManagerConfiguration config;
@@ -326,19 +353,22 @@ void AutopilotManager::start_collision_avoidance_manager() {
         return config;
     });
 
-    _collision_avoidance_manager->getDownsampledDepthDataCallback([this]() {
+    _collision_avoidance_manager->getDownsampledDepthDataCallback([this]()
+    {
         std::lock_guard<std::mutex> lock(_downsampled_depth_callback_mutex);
         return _sensor_manager->get_lastest_downsampled_depth();
     });
 
     _collision_avoidance_manager->init();
-    _collision_avoidance_manager_th = std::thread(&AutopilotManager::run_collision_avoidance_manager, this);
+    _collision_avoidance_manager_th = std::thread(&AutopilotManager::run_collision_avoidance_manager, this);*/
 }
 
-void AutopilotManager::start_landing_manager(std::shared_ptr<mavsdk::System> mavsdk_system) {
-    _landing_manager = std::make_shared<LandingManager>(mavsdk_system);
+void AutopilotManager::start_landing_manager(std::shared_ptr<mavsdk::System> mavsdk_system)
+{
+    /*_landing_manager = std::make_shared<LandingManager>(mavsdk_system);
 
-    _landing_manager->setConfigUpdateCallback([this]() {
+    _landing_manager->setConfigUpdateCallback([this]()
+    {
         std::lock_guard<std::mutex> lock(_config_mutex);
 
         LandingManager::LandingManagerConfiguration config;
@@ -349,20 +379,23 @@ void AutopilotManager::start_landing_manager(std::shared_ptr<mavsdk::System> mav
         return config;
     });
 
-    _landing_manager->getDownsampledDepthDataCallback([this]() {
+    _landing_manager->getDownsampledDepthDataCallback([this]()
+    {
         std::lock_guard<std::mutex> lock(_downsampled_depth_callback_mutex);
         return _sensor_manager->get_lastest_downsampled_depth();
     });
 
     _landing_manager->init();
-    _landing_manager_th = std::thread(&AutopilotManager::run_landing_manager, this);
+    _landing_manager_th = std::thread(&AutopilotManager::run_landing_manager, this);*/
 }
 
-void AutopilotManager::start_mission_manager(std::shared_ptr<mavsdk::System> mavsdk_system) {
+void AutopilotManager::start_mission_manager(std::shared_ptr<mavsdk::System> mavsdk_system) 
+{
     _mission_manager = std::make_shared<MissionManager>(mavsdk_system, _custom_action_config_path);
 
     // Init the callback for setting the Mission Manager parameters
-    _mission_manager->setConfigUpdateCallback([this]() {
+    _mission_manager->setConfigUpdateCallback([this]() 
+    {
         std::lock_guard<std::mutex> lock(_config_mutex);
 
         MissionManager::MissionManagerConfiguration config;
@@ -398,70 +431,79 @@ void AutopilotManager::start_mission_manager(std::shared_ptr<mavsdk::System> mav
         config.simple_collision_avoid_enabled = _simple_collision_avoid_enabled;
         config.simple_collision_avoid_distance_threshold = _simple_collision_avoid_distance_threshold;
         config.simple_collision_avoid_action_on_condition_true = _simple_collision_avoid_action_on_condition_true;
+        
         return config;
     });
 
     // Init the callback for getting the latest distance to obstacle
-    _mission_manager->getDistanceToObstacleCallback([this]() {
+    /*_mission_manager->getDistanceToObstacleCallback([this]() {
         std::lock_guard<std::mutex> lock(_distance_to_obstacle_mutex);
         return _collision_avoidance_manager->get_latest_distance();
-    });
+    });*/
 
     // Init the callback for getting the latest landing condition state
-    _mission_manager->getCanLandStateCallback([this]() {
+    /*_mission_manager->getCanLandStateCallback([this]() {
         std::lock_guard<std::mutex> lock(_landing_condition_state_mutex);
         return _landing_manager->get_latest_landing_condition_state();
-    });
+    });*/
 
     // Init the callback for getting the landing condition state at a particular position
-    _mission_manager->getCanLandAtPositionStateCallback([this](float x, float y) {
+    /*_mission_manager->getCanLandAtPositionStateCallback([this](float x, float y) {
         std::lock_guard<std::mutex> lock(_landing_condition_state_mutex);
         return _landing_manager->get_landing_condition_state_at_position(x, y);
-    });
+    });*/
 
     // Init the callback for getting the latest landing condition state
-    _mission_manager->getHeightAboveObstacleCallback([this]() {
+    /*_mission_manager->getHeightAboveObstacleCallback([this]() {
         std::lock_guard<std::mutex> lock(_height_above_obstacle_mutex);
         return _landing_manager->get_latest_height_above_obstacle();
-    });
+    });*/
 
     // Init and run the Mission Manager
     _mission_manager->init();
     _mission_manager_th = std::thread(&AutopilotManager::run_mission_manager, this);
 }
 
-void AutopilotManager::run_sensor_manager() {
+void AutopilotManager::run_sensor_manager() 
+{
     // Run the Sensor Manager node
     _sensor_manager->run();
 }
 
-void AutopilotManager::run_collision_avoidance_manager() {
+void AutopilotManager::run_collision_avoidance_manager() 
+{
     // Run the Collision Avoidance Manager node
-    _collision_avoidance_manager->run();
+    //_collision_avoidance_manager->run();
 }
 
-void AutopilotManager::run_landing_manager() {
+void AutopilotManager::run_landing_manager()
+{
     // Run the Landing Manager node
-    _landing_manager->run();
+    //_landing_manager->run();
 }
 
-void AutopilotManager::run_mission_manager() {
+void AutopilotManager::run_mission_manager() 
+{
     // Run the Mission Manager node
     _mission_manager->run();
 }
 
-void AutopilotManager::run() {
-    while (!_interrupt_received) {
+void AutopilotManager::run() 
+{
+    while(!_interrupt_received)
+    {
         // Check if obstacle avoidance is enabled
         update_obstacle_avoidance_enabled();
 
-        if (_safe_landing_enabled) {
+        if(_safe_landing_enabled)
+        {
             // Send avoidance heartbeat
             const bool sm_healthy = _sensor_manager->isHealthy();
             const bool lm_healthy = _landing_manager->isHealthy();
             const bool mm_healthy = _mission_manager->isHealthy();
 
-            if (sm_healthy && lm_healthy && mm_healthy) {
+            if(sm_healthy && lm_healthy && mm_healthy)
+            {
                 _mavlink_passthrough->send_message(_avoidance_heartbeat_message);
             }
         }
@@ -471,11 +513,13 @@ void AutopilotManager::run() {
     }
 }
 
-void AutopilotManager::update_obstacle_avoidance_enabled() {
+void AutopilotManager::update_obstacle_avoidance_enabled()
+{
     const bool should_be_enabled = _mission_manager->is_obstacle_avoidance_enabled();
     const bool should_change = should_be_enabled != _obstacle_avoidance_enabled;
 
-    if (!should_change) {
+    if(!should_change)
+    {
         return;
     }
 
@@ -484,11 +528,12 @@ void AutopilotManager::update_obstacle_avoidance_enabled() {
               << " in PX4." << std::endl;
 
     // Update the modules that use the OA-enabled parameter
-    _landing_manager->set_obstacle_avoidance_enabled(_obstacle_avoidance_enabled);
+    //_landing_manager->set_obstacle_avoidance_enabled(_obstacle_avoidance_enabled);
     _sensor_manager->set_obstacle_avoidance_enabled(_obstacle_avoidance_enabled);
 }
 
-void AutopilotManager::create_avoidance_mavlink_heartbeat_message() {
+void AutopilotManager::create_avoidance_mavlink_heartbeat_message()
+{
     mavlink_heartbeat_t heartbeat;
     heartbeat.system_status = MAV_STATE_ACTIVE;
     mavlink_msg_heartbeat_encode(1, MAV_COMP_ID_OBSTACLE_AVOIDANCE, &_avoidance_heartbeat_message, &heartbeat);
